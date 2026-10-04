@@ -61,6 +61,24 @@ docker/               служебные скрипты образа
 Пересборка docx-шаблонов после изменения стандартов:
 `python templates/build_templates.py`.
 
+## Правила для ИИ-агентов и нейросетей
+
+Любая нейросеть (ZCode, Claude Code, Codex, Copilot и др.), работающая
+с этим репозиторием, обязана следовать:
+
+- [`AGENTS.md`](AGENTS.md) — главный файл правил: структура, команды,
+  сетевые особенности, запреты, конвенции;
+- [`templates/REPORT_STANDARDS.md`](templates/REPORT_STANDARDS.md) —
+  стандарты оформления отчётов;
+- скиллы в `.agents/skills/`: `new-lab` (новая лабораторная),
+  `render-reports` (сборка docx+pdf), `synergy-report` (сверка стиля
+  отчёта);
+- `CLAUDE.md` и `.github/copilot-instructions.md` — то же для
+  Claude Code и GitHub Copilot.
+
+Чтобы ZCode подхватил правила и скиллы автоматически, открывайте сессию
+в корне этого репозитория.
+
 ## Выполнение лабораторной работы
 
 В RStudio откройте `labs/lab-01/` и запускайте скрипты по одному
