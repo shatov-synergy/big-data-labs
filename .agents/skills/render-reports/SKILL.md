@@ -28,19 +28,30 @@ docker compose run --rm rstudio bash -lc \
   "cd labs/lab-01 && for i in 1 2 3; do Rscript -e \"rmarkdown::render('zadacha\${i}_report.Rmd', output_dir = 'output')\"; done"
 ```
 
-## 3. Титульный лист (клон ВКР) + центрирование картинок
+## 3. Титульный лист, СОДЕРЖАНИЕ, нумерация страниц (ГОСТ 7.32-2017)
 
-Сразу после рендера, на хосте (нужен python-docx: `pip install python-docx`):
+Сразу после рендера, на хосте (нужны python-docx и pypdf:
+`pip install python-docx pypdf`):
 
 ```bash
 python templates/apply_title_page.py "labs/lab-01/output/zadacha1_report.docx" \
-  --lab 1 --topic "Задача 1. Разведочный анализ. Базовая визуализация данных"
-# для остальных задач — свои --topic
+  --lab 1 --toc --topic "Задача 1. Разведочный анализ. Базовая визуализация данных"
 ```
 
-Скрипт вставляет титульный лист (структура 1-в-1 с ВКР: форма-таблицы,
-подчёркнутые ячейки, подсказки, «МОСКВА 2026 г.») и центрирует все
-абзацы с изображениями.
+Скрипт вставляет титульный лист (структура 1-в-1 с ВКР), страницу
+СОДЕРЖАНИЕ (номера-заполнители), центрирует картинки и добавляет
+номера страниц в футер (титул без номера).
+
+Затем ДВУПРОХОДНАЯ сборка номеров содержания:
+
+```bash
+# проход 1: pdf с заполнителями
+docker compose run --rm rstudio bash -lc "apt-get update -qq && apt-get install -y -qq libreoffice-writer poppler-utils fonts-liberation && cd labs/lab-01/output && soffice --headless --convert-to pdf --outdir . zadacha1_report.docx"
+# проставить фактические номера страниц
+python templates/apply_title_page.py "labs/lab-01/output/zadacha1_report.docx" \
+  --lab 1 --update-toc "labs/lab-01/output/zadacha1_report.pdf" --topic "x"
+# проход 2: финальный pdf + копия под именем сдачи
+```
 
 ## 4. Итоговые имена + PDF (LibreOffice в контейнере)
 
