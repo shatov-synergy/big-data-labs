@@ -1,90 +1,9 @@
 ---
-title: "Отчет по лабораторной работе № 1. Задача 2"
 output:
   word_document:
     reference_docx: reference.docx
 knit: (function(input, ...) { rmarkdown::render(input, output_dir = "output", ...) })
 ---
-
-::: {custom-style="TitlePage"}
-**НЕГОСУДАРСТВЕННОЕ ОБРАЗОВАТЕЛЬНОЕ ЧАСТНОЕ УЧРЕЖДЕНИЕ ВЫСШЕГО ОБРАЗОВАНИЯ**
-
-**«МОСКОВСКИЙ ФИНАНСОВО-ПРОМЫШЛЕННЫЙ УНИВЕРСИТЕТ «СИНЕРГИЯ»»**
-:::
-
-::: {custom-style="TitlePage"}
-**Факультет:** [Информационных технологий]{custom-style="UnderlineValue"}
-:::
-
-::: {custom-style="TitlePageSmall"}
-(наименование факультета / института)
-:::
-
-::: {custom-style="TitlePage"}
-**Направление подготовки:** [09.03.02 Информационные системы и технологии]{custom-style="UnderlineValue"}
-:::
-
-::: {custom-style="TitlePageSmall"}
-(код и наименование направления подготовки / специальности)
-:::
-
-::: {custom-style="TitlePage"}
-**Форма обучения:** [очная]{custom-style="UnderlineValue"}
-:::
-
-::: {custom-style="TitlePageSmall"}
-(очная, очно-заочная, заочная)
-:::
-
-::: {custom-style="TitlePage"}
-&nbsp;
-:::
-
-::: {custom-style="TitlePage"}
-**ОТЧЕТ**
-
-**по лабораторной работе № 1**
-
-**по дисциплине** «Продвинутые технологии работы с большими данными»
-
-**на тему:** [«Задача 2. Разведочный анализ данных на основе датасета mtcars»]{custom-style="UnderlineValue"}
-:::
-
-::: {custom-style="TitlePage"}
-&nbsp;
-:::
-
-::: {custom-style="TitlePage"}
-**Обучающийся:** [Шатов Илья Андреевич]{custom-style="UnderlineValue"}
-:::
-
-::: {custom-style="TitlePageSmall"}
-(Фамилия Имя Отчество)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(подпись)
-:::
-
-::: {custom-style="TitlePage"}
-**Группа:** [ВБИо-403-рсоб]{custom-style="UnderlineValue"}
-:::
-
-::: {custom-style="TitlePage"}
-**Преподаватель:** [&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]{custom-style="UnderlineValue"}
-:::
-
-::: {custom-style="TitlePageSmall"}
-(Фамилия Имя Отчество)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(подпись)
-:::
-
-::: {custom-style="TitlePage"}
-&nbsp;
-:::
-
-::: {custom-style="TitlePage"}
-&nbsp;
-:::
-
-::: {custom-style="TitlePage"}
-**Москва 2026 г.**
-:::
 
 # Задача 2. Разведочный анализ данных на основе датасета mtcars {#задача2}
 
@@ -122,11 +41,7 @@ data(mtcars)
 выбирается то, которое встречается чаще всего.
 
 ::: {custom-style="Table Caption"}
-Таблица 1
-:::
-
-::: {custom-style="Table Title"}
-Описательные статистики переменных mtcars.
+Таблица 1 — Описательные статистики переменных mtcars
 :::
 
 ```{r mode}
@@ -165,7 +80,7 @@ knitr::kable(extended_stats)
 совмещены на рисунке 1 (интерактивная версия построена средствами
 `plotly` и сохранена в `output/task2_density_mpg.html`).
 
-```{r density, fig.cap="Рисунок 1. Плотность распределения mpg: гистограмма, ядерная оценка и нормальная кривая"}
+```{r density, fig.cap="Рисунок 1 — Плотность распределения mpg: гистограмма, ядерная оценка и нормальная кривая"}
 dfn <- data.frame(x = seq(min(mtcars$mpg), max(mtcars$mpg), length.out = 200))
 dfn$y <- dnorm(dfn$x, mean = mean(mtcars$mpg), sd = sd(mtcars$mpg))
 ggplot(mtcars, aes(x = mpg)) +
@@ -187,7 +102,7 @@ ggplot(mtcars, aes(x = mpg)) +
 
 QQ-plot для `mpg` представлен на рисунке 2.
 
-```{r qq, fig.cap="Рисунок 2. QQ-plot для mpg"}
+```{r qq, fig.cap="Рисунок 2 — QQ-plot для mpg"}
 qq_data <- as.data.frame(qqnorm(mtcars$mpg, plot.it = FALSE))
 qq_data$line <- fitted(lm(y ~ x, data = qq_data))
 ggplot(qq_data, aes(x, y)) +
@@ -217,7 +132,7 @@ W = `r round(unname(shapiro_res$statistic), 4)`, p-значение =
 
 Ящик с усами с отображением всех наблюдений приведён на рисунке 3.
 
-```{r box, fig.cap="Рисунок 3. Boxplot mpg с отображением всех точек"}
+```{r box, fig.cap="Рисунок 3 — Boxplot mpg с отображением всех точек"}
 ggplot(mtcars, aes(x = "", y = mpg)) +
   geom_boxplot(fill = scales::alpha("#FFB4B4", 0.4), color = "#d62728",
                outlier.shape = NA) +
@@ -259,11 +174,7 @@ knitr::kable(out_rows)
 `summarise()`, приведены в таблице 2.
 
 ::: {custom-style="Table Caption"}
-Таблица 2
-:::
-
-::: {custom-style="Table Title"}
-Групповые статистики mpg по числу цилиндров.
+Таблица 2 — Групповые статистики mpg по числу цилиндров
 :::
 
 ```{r group}
@@ -277,7 +188,7 @@ knitr::kable(group_stats, digits = 2)
 Средние по группам со стандартными отклонениями визуализированы на
 рисунке 4.
 
-```{r group-plot, fig.cap="Рисунок 4. Средний mpg по группам цилиндров (± SD)"}
+```{r group-plot, fig.cap="Рисунок 4 — Средний mpg по группам цилиндров (± SD)"}
 ggplot(group_stats, aes(x = factor(cyl), y = mean_mpg, fill = factor(cyl))) +
   geom_col(width = 0.6) +
   geom_errorbar(aes(ymin = mean_mpg - sd_mpg, ymax = mean_mpg + sd_mpg),
@@ -329,7 +240,7 @@ print(tukey_res)
 Попарные различия средних по тесту Тьюки визуализированы на рисунке 5;
 значимые контрасты (p adj < 0.05) выделены тёмным цветом.
 
-```{r tukey-plot, fig.cap="Рисунок 5. Tukey HSD: попарные различия средних mpg"}
+```{r tukey-plot, fig.cap="Рисунок 5 — Tukey HSD: попарные различия средних mpg"}
 tukey_df <- as.data.frame(tukey_res$cyl_f)
 tukey_df$comparison <- rownames(tukey_df)
 tukey_df$half <- (tukey_df$upr - tukey_df$lwr) / 2

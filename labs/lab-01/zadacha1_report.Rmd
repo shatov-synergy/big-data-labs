@@ -1,90 +1,9 @@
 ---
-title: "Отчет по лабораторной работе № 1. Задача 1"
 output:
   word_document:
     reference_docx: reference.docx
 knit: (function(input, ...) { rmarkdown::render(input, output_dir = "output", ...) })
 ---
-
-::: {custom-style="TitlePage"}
-**НЕГОСУДАРСТВЕННОЕ ОБРАЗОВАТЕЛЬНОЕ ЧАСТНОЕ УЧРЕЖДЕНИЕ ВЫСШЕГО ОБРАЗОВАНИЯ**
-
-**«МОСКОВСКИЙ ФИНАНСОВО-ПРОМЫШЛЕННЫЙ УНИВЕРСИТЕТ «СИНЕРГИЯ»»**
-:::
-
-::: {custom-style="TitlePage"}
-**Факультет:** [Информационных технологий]{custom-style="UnderlineValue"}
-:::
-
-::: {custom-style="TitlePageSmall"}
-(наименование факультета / института)
-:::
-
-::: {custom-style="TitlePage"}
-**Направление подготовки:** [09.03.02 Информационные системы и технологии]{custom-style="UnderlineValue"}
-:::
-
-::: {custom-style="TitlePageSmall"}
-(код и наименование направления подготовки / специальности)
-:::
-
-::: {custom-style="TitlePage"}
-**Форма обучения:** [очная]{custom-style="UnderlineValue"}
-:::
-
-::: {custom-style="TitlePageSmall"}
-(очная, очно-заочная, заочная)
-:::
-
-::: {custom-style="TitlePage"}
-&nbsp;
-:::
-
-::: {custom-style="TitlePage"}
-**ОТЧЕТ**
-
-**по лабораторной работе № 1**
-
-**по дисциплине** «Продвинутые технологии работы с большими данными»
-
-**на тему:** [«Задача 1. Разведочный анализ. Базовая визуализация данных»]{custom-style="UnderlineValue"}
-:::
-
-::: {custom-style="TitlePage"}
-&nbsp;
-:::
-
-::: {custom-style="TitlePage"}
-**Обучающийся:** [Шатов Илья Андреевич]{custom-style="UnderlineValue"}
-:::
-
-::: {custom-style="TitlePageSmall"}
-(Фамилия Имя Отчество)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(подпись)
-:::
-
-::: {custom-style="TitlePage"}
-**Группа:** [ВБИо-403-рсоб]{custom-style="UnderlineValue"}
-:::
-
-::: {custom-style="TitlePage"}
-**Преподаватель:** [&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]{custom-style="UnderlineValue"}
-:::
-
-::: {custom-style="TitlePageSmall"}
-(Фамилия Имя Отчество)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(подпись)
-:::
-
-::: {custom-style="TitlePage"}
-&nbsp;
-:::
-
-::: {custom-style="TitlePage"}
-&nbsp;
-:::
-
-::: {custom-style="TitlePage"}
-**Москва 2026 г.**
-:::
 
 # Задача 1. Разведочный анализ. Базовая визуализация данных {#задача1}
 
@@ -132,7 +51,7 @@ colSums(is.na(diamonds))
 
 Гистограмма распределения цены представлена на рисунке 1.
 
-```{r a-price, fig.cap="Рисунок 1. Гистограмма распределения бриллиантов по цене"}
+```{r a-price, fig.cap="Рисунок 1 — Гистограмма распределения бриллиантов по цене"}
 ggplot(diamonds, aes(x = price)) +
   geom_histogram(bins = 30, fill = "steelblue", color = "white") +
   labs(title = "Распределение цены бриллиантов",
@@ -141,7 +60,7 @@ ggplot(diamonds, aes(x = price)) +
 
 Распределение глубины показано на рисунке 2.
 
-```{r a-depth, fig.cap="Рисунок 2. Гистограмма распределения бриллиантов по глубине"}
+```{r a-depth, fig.cap="Рисунок 2 — Гистограмма распределения бриллиантов по глубине"}
 ggplot(diamonds, aes(x = depth)) +
   geom_histogram(bins = 30, fill = "darkgreen", color = "white") +
   labs(title = "Распределение глубины бриллиантов",
@@ -160,7 +79,7 @@ ggplot(diamonds, aes(x = depth)) +
 
 Количество бриллиантов по уровням огранки приведено на рисунке 3.
 
-```{r b-cut, fig.cap="Рисунок 3. Количество бриллиантов по качеству огранки"}
+```{r b-cut, fig.cap="Рисунок 3 — Количество бриллиантов по качеству огранки"}
 ggplot(diamonds, aes(x = cut, fill = cut)) +
   geom_bar() +
   labs(title = "Количество бриллиантов по качеству огранки",
@@ -180,7 +99,7 @@ ggplot(diamonds, aes(x = cut, fill = cut)) +
 Распределение бриллиантов по огранке с разбивкой на подкатегории чистоты
 представлено на рисунке 4.
 
-```{r b-sub, fig.cap="Рисунок 4. Количество бриллиантов по огранке и чистоте"}
+```{r b-sub, fig.cap="Рисунок 4 — Количество бриллиантов по огранке и чистоте"}
 ggplot(diamonds, aes(x = cut, fill = clarity)) +
   geom_bar(position = "dodge") +
   labs(title = "Количество бриллиантов по огранке и чистоте",
@@ -198,7 +117,7 @@ ggplot(diamonds, aes(x = cut, fill = clarity)) +
 Совмещённая диаграмма рассеяния и ящиков с усами для связи «огранка —
 глубина» приведена на рисунке 5.
 
-```{r g-jitter, fig.cap="Рисунок 5. Качество огранки и глубина (джиттер + ящики с усами)"}
+```{r g-jitter, fig.cap="Рисунок 5 — Качество огранки и глубина (джиттер + ящики с усами)"}
 ggplot(diamonds, aes(x = cut, y = depth)) +
   geom_jitter(alpha = 0.2, color = "steelblue") +
   geom_boxplot(alpha = 0.5, fill = NA, color = "black", outlier.shape = NA) +
@@ -208,7 +127,7 @@ ggplot(diamonds, aes(x = cut, y = depth)) +
 
 Классическая диаграмма рассеяния «вес — цена» показана на рисунке 6.
 
-```{r g-scatter, fig.cap="Рисунок 6. Зависимость цены от веса бриллианта"}
+```{r g-scatter, fig.cap="Рисунок 6 — Зависимость цены от веса бриллианта"}
 ggplot(diamonds, aes(x = carat, y = price, color = cut)) +
   geom_point(alpha = 0.25) +
   labs(title = "Зависимость цены от веса бриллианта",
@@ -226,7 +145,7 @@ ggplot(diamonds, aes(x = carat, y = price, color = cut)) +
 
 Распределение цены по уровням огранки представлено на рисунке 7.
 
-```{r d-box, fig.cap="Рисунок 7. Цена по качеству огранки (ящики с усами)"}
+```{r d-box, fig.cap="Рисунок 7 — Цена по качеству огранки (ящики с усами)"}
 ggplot(diamonds, aes(x = cut, y = price, fill = cut)) +
   geom_boxplot() +
   labs(title = "Цена по качеству огранки",

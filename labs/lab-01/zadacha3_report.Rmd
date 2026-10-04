@@ -1,90 +1,9 @@
 ---
-title: "Отчет по лабораторной работе № 1. Задача 3"
 output:
   word_document:
     reference_docx: reference.docx
 knit: (function(input, ...) { rmarkdown::render(input, output_dir = "output", ...) })
 ---
-
-::: {custom-style="TitlePage"}
-**НЕГОСУДАРСТВЕННОЕ ОБРАЗОВАТЕЛЬНОЕ ЧАСТНОЕ УЧРЕЖДЕНИЕ ВЫСШЕГО ОБРАЗОВАНИЯ**
-
-**«МОСКОВСКИЙ ФИНАНСОВО-ПРОМЫШЛЕННЫЙ УНИВЕРСИТЕТ «СИНЕРГИЯ»»**
-:::
-
-::: {custom-style="TitlePage"}
-**Факультет:** [Информационных технологий]{custom-style="UnderlineValue"}
-:::
-
-::: {custom-style="TitlePageSmall"}
-(наименование факультета / института)
-:::
-
-::: {custom-style="TitlePage"}
-**Направление подготовки:** [09.03.02 Информационные системы и технологии]{custom-style="UnderlineValue"}
-:::
-
-::: {custom-style="TitlePageSmall"}
-(код и наименование направления подготовки / специальности)
-:::
-
-::: {custom-style="TitlePage"}
-**Форма обучения:** [очная]{custom-style="UnderlineValue"}
-:::
-
-::: {custom-style="TitlePageSmall"}
-(очная, очно-заочная, заочная)
-:::
-
-::: {custom-style="TitlePage"}
-&nbsp;
-:::
-
-::: {custom-style="TitlePage"}
-**ОТЧЕТ**
-
-**по лабораторной работе № 1**
-
-**по дисциплине** «Продвинутые технологии работы с большими данными»
-
-**на тему:** [«Задача 3. Предобработка временных рядов»]{custom-style="UnderlineValue"}
-:::
-
-::: {custom-style="TitlePage"}
-&nbsp;
-:::
-
-::: {custom-style="TitlePage"}
-**Обучающийся:** [Шатов Илья Андреевич]{custom-style="UnderlineValue"}
-:::
-
-::: {custom-style="TitlePageSmall"}
-(Фамилия Имя Отчество)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(подпись)
-:::
-
-::: {custom-style="TitlePage"}
-**Группа:** [ВБИо-403-рсоб]{custom-style="UnderlineValue"}
-:::
-
-::: {custom-style="TitlePage"}
-**Преподаватель:** [&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]{custom-style="UnderlineValue"}
-:::
-
-::: {custom-style="TitlePageSmall"}
-(Фамилия Имя Отчество)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(подпись)
-:::
-
-::: {custom-style="TitlePage"}
-&nbsp;
-:::
-
-::: {custom-style="TitlePage"}
-&nbsp;
-:::
-
-::: {custom-style="TitlePage"}
-**Москва 2026 г.**
-:::
 
 # Задача 3. Предобработка временных рядов {#задача3}
 
@@ -146,7 +65,7 @@ cat("Наблюдений:", nrow(df_full),
 (`ggplot2` + `plotly`, `accumulate_by`, покадровая анимация со слайдером)
 сохранена в `output/task3_animated_close.html`.
 
-```{r static100, fig.cap="Рисунок 1. Цена закрытия TSLA за последние 100 торговых сессий"}
+```{r static100, fig.cap="Рисунок 1 — Цена закрытия TSLA за последние 100 торговых сессий"}
 df100 <- tail(df_full, 100)
 ggplot(df100, aes(x = Date, y = Close)) +
   geom_line(color = "steelblue", linewidth = 0.8) +
@@ -188,11 +107,7 @@ cat(sprintf("Календарных торговых дней: %d, из них �
 таблицу 1.
 
 ::: {custom-style="Table Caption"}
-Таблица 1
-:::
-
-::: {custom-style="Table Title"}
-Результаты тестов стационарности.
+Таблица 1 — Результаты тестов стационарности
 :::
 
 ```{r tests, collapse=TRUE}
@@ -235,11 +150,11 @@ KPSS не отвергает стационарность (p = 0.1).
 Автокорреляционная и частная автокорреляционная функции доходностей
 показаны на рисунках 2 и 3 соответственно.
 
-```{r acf, fig.cap="Рисунок 2. ACF лог-доходностей TSLA", fig.height=4}
+```{r acf, fig.cap="Рисунок 2 — ACF лог-доходностей TSLA", fig.height=4}
 acf(na.omit(df$ret), main = "ACF доходностей")
 ```
 
-```{r pacf, fig.cap="Рисунок 3. PACF лог-доходностей TSLA", fig.height=4}
+```{r pacf, fig.cap="Рисунок 3 — PACF лог-доходностей TSLA", fig.height=4}
 pacf(na.omit(df$ret), main = "PACF доходностей")
 ```
 
@@ -254,7 +169,7 @@ pacf(na.omit(df$ret), main = "PACF доходностей")
 STL-декомпозиция ряда цены закрытия с периодом 252 сессии (торговый год)
 представлена на рисунке 4.
 
-```{r stl, fig.cap="Рисунок 4. STL-декомпозиция ряда цены закрытия (период 252)", fig.height=6}
+```{r stl, fig.cap="Рисунок 4 — STL-декомпозиция ряда цены закрытия (период 252)", fig.height=6}
 ts_close <- ts(df$Close, frequency = 252)
 stl_fit <- stl(ts_close, s.window = "periodic")
 plot(stl_fit)
@@ -272,11 +187,7 @@ z-score) и три алгоритма машинного обучения (Isola
 DBSCAN); количество обнаруженных аномалий по методам сведено в таблицу 2.
 
 ::: {custom-style="Table Caption"}
-Таблица 2
-:::
-
-::: {custom-style="Table Title"}
-Число аномалий по методам.
+Таблица 2 — Число аномалий по методам
 :::
 
 ```{r anomalies}
@@ -320,7 +231,7 @@ df$anomaly[out_dbscan] <- TRUE
 (сессия помечена аномальной, если её выделил хотя бы один из шести
 методов) показана на рисунке 5.
 
-```{r anom-plot, fig.cap="Рисунок 5. Цена закрытия TSLA и аномальные сессии (красным)"}
+```{r anom-plot, fig.cap="Рисунок 5 — Цена закрытия TSLA и аномальные сессии (красным)"}
 ggplot(df, aes(x = Date, y = Close)) +
   geom_line(color = "steelblue", linewidth = 0.5) +
   geom_point(data = subset(df, anomaly), color = "red", size = 1) +

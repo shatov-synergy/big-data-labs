@@ -202,7 +202,18 @@ def configure_styles(doc):
                                  base=None)
     _set_style_font(verbatim, MONO, 10)
 
-    # --- Подпись рисунка: «Рисунок N. Название», по центру, ПОЛУЖИРНО ---
+    # --- Абзац с картинкой: ПО ЦЕНТРУ, без красной строки (ГОСТ 7.32-2017) ---
+    for fig_name in ("Figure", "Captioned Figure"):
+        fig = _get_or_add_style(doc, fig_name, base="Normal")
+        _set_style_font(fig, TNR, 14, color=(0, 0, 0))
+        fig.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        fig.paragraph_format.first_line_indent = Cm(0)
+        fig.paragraph_format.line_spacing = 1.0
+        fig.paragraph_format.space_before = Pt(6)
+        fig.paragraph_format.space_after = Pt(0)
+        fig.paragraph_format.keep_with_next = True
+
+    # --- Подпись рисунка: «Рисунок N — Название», по центру, полужирно ---
     cap = _get_or_add_style(doc, "Image Caption", base="Normal")
     _set_style_font(cap, TNR, 14, bold=True, color=(0, 0, 0))
     cap.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -212,24 +223,16 @@ def configure_styles(doc):
     cap.paragraph_format.space_after = Pt(12)
     cap.paragraph_format.keep_with_next = False
 
-    # --- Подписи таблиц (как в ВКР, две строки) ---
+    # --- Подпись таблицы по ГОСТ 7.32-2017: «Таблица N — Название» ---
+    # одна строка НАД таблицей, слева, без абзацного отступа, полужирно
     tcap = _get_or_add_style(doc, "Table Caption", base="Normal")
     _set_style_font(tcap, TNR, 14, bold=True, color=(0, 0, 0))
-    tcap.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    tcap.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
     tcap.paragraph_format.first_line_indent = Cm(0)
     tcap.paragraph_format.line_spacing = 1.0
     tcap.paragraph_format.space_before = Pt(12)
-    tcap.paragraph_format.space_after = Pt(0)
+    tcap.paragraph_format.space_after = Pt(6)
     tcap.paragraph_format.keep_with_next = True
-
-    ttitle = _get_or_add_style(doc, "Table Title", base="Normal")
-    _set_style_font(ttitle, TNR, 14, bold=True, color=(0, 0, 0))
-    ttitle.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    ttitle.paragraph_format.first_line_indent = Cm(0)
-    ttitle.paragraph_format.line_spacing = 1.0
-    ttitle.paragraph_format.space_before = Pt(0)
-    ttitle.paragraph_format.space_after = Pt(6)
-    ttitle.paragraph_format.keep_with_next = True
 
     # --- Стиль таблиц pandoc: одинарные границы, шапка полужирная по центру ---
     try:
@@ -269,85 +272,192 @@ def new_document():
 
 
 # ------------------------------------------------------------------
-# Титульный лист «Синергии» (форма: метки полужирные, значения
-# подчёркнутые, подсказки 9 пт)
+# Титульный лист — клон структуры ВКР (Диплом_3_версия.docx):
+# форма из таблиц без внешних границ, значения подчёркнуты нижней
+# границей ячейки, подсказки курсивом сверху 10 пт.
 # ------------------------------------------------------------------
 
-def _tp(doc, text="", bold=False, small=False, underline_value=None):
-    p = doc.add_paragraph(style="TitlePageSmall" if small else "TitlePage")
-    if bold and text:
-        p.add_run(text).bold = True
-    elif underline_value is not None:
-        r = p.add_run(underline_value)
-        r.underline = True
-    elif text:
-        p.add_run(text)
+def _cell_bottom_border(cell):
+    """Нижняя граница ячейки — «линия для заполнения» как в образце."""
+    tc_pr = cell._tc.get_or_add_tcPr()
+    borders = OxmlElement("w:tcBorders")
+    b = OxmlElement("w:bottom")
+    b.set(qn("w:val"), "single")
+    b.set(qn("w:sz"), "4")
+    b.set(qn("w:space"), "0")
+    b.set(qn("w:color"), "auto")
+    borders.append(b)
+    tc_pr.append(borders)
+
+
+def _no_borders(table):
+    tbl_pr = table._tbl.tblPr
+    borders = OxmlElement("w:tblBorders")
+    for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
+        el = OxmlElement("w:" + edge)
+        el.set(qn("w:val"), "none")
+        el.set(qn("w:sz"), "0")
+        borders.append(el)
+    tbl_pr.append(borders)
+
+
+def _para(container, text="", bold=False, italic=False, underline=False,
+          size=14, align=WD_ALIGN_PARAGRAPH.CENTER, superscript=False,
+          before=0, after=0):
+    p = container.add_paragraph()
+    p.alignment = align
+    pf = p.paragraph_format
+    pf.first_line_indent = Cm(0)
+    pf.line_spacing = 1.0
+    pf.space_before = Pt(before)
+    pf.space_after = Pt(after)
+    if text:
+        r = p.add_run(text)
+        r.bold = bold
+        r.italic = italic
+        r.underline = underline
+        r.font.name = TNR
+        r.font.size = Pt(size)
+        if superscript:
+            r.font.superscript = True
     return p
 
 
-def _tp_label_value(doc, label, value, hint=None):
-    """Строка формы: «Метка: значение(подчёркнуто)» + подсказка 9 пт."""
-    p = doc.add_paragraph(style="TitlePage")
-    p.add_run(label).bold = True
-    r = p.add_run(" " + value + " ")
-    r.underline = True
-    if hint:
-        _tp(doc, hint, small=True)
+def _cell_para(cell, text="", bold=False, italic=False, size=12,
+               align=WD_ALIGN_PARAGRAPH.CENTER, superscript=False):
+    cell.text = ""
+    return _para(cell, text, bold=bold, italic=italic, size=size,
+                 align=align, superscript=superscript)
 
 
 def add_title_page(doc, discipline="", topic="", lab_number="",
                    student="Шатов Илья Андреевич", group="",
-                   teacher="", year=2026,
-                   institute="Информационных технологий",
-                   direction="09.03.02 Информационные системы и технологии",
-                   study_form="очная"):
-    """Титульный лист по образцу формы Синергии."""
-    # шапка вуза
-    _tp(doc, "НЕГОСУДАРСТВЕННОЕ ОБРАЗОВАТЕЛЬНОЕ ЧАСТНОЕ", bold=True)
-    _tp(doc, "УЧРЕЖДЕНИЕ ВЫСШЕГО ОБРАЗОВАНИЯ", bold=True)
-    _tp(doc, "«МОСКОВСКИЙ ФИНАНСОВО-ПРОМЫШЛЕННЫЙ УНИВЕРСИТЕТ «СИНЕРГИЯ»»",
-        bold=True)
-    _tp(doc)
-    # форма
-    _tp_label_value(doc, "Факультет:", institute,
-                    "(наименование факультета / института)")
-    _tp_label_value(doc, "Направление подготовки:", direction,
-                    "(код и наименование направления подготовки / специальности)")
-    _tp_label_value(doc, "Форма обучения:", study_form,
-                    "(очная, очно-заочная, заочная)")
-    _tp(doc)
-    _tp(doc)
-    # тип работы
-    _tp(doc, "ОТЧЕТ", bold=True)
-    _tp(doc, "по лабораторной работе № " + str(lab_number), bold=True)
-    p = doc.add_paragraph(style="TitlePage")
-    p.add_run("по дисциплине ").bold = True
-    p.add_run("«" + discipline + "»")
-    p = doc.add_paragraph(style="TitlePage")
-    p.add_run("на тему: ").bold = True
-    r = p.add_run("«" + topic + "»")
+                   teacher="", year=2026):
+    """Титульный лист — точный клон структуры титульного листа ВКР."""
+    # --- шапка вуза ---
+    _para(doc, before=6)
+    _para(doc, "НЕГОСУДАРСТВЕННОЕ ОБРАЗОВАТЕЛЬНОЕ ЧАСТНОЕ УЧРЕЖДЕНИЕ "
+               "ВЫСШЕГО ОБРАЗОВАНИЯ")
+    _para(doc, "«МОСКОВСКИЙ ФИНАНСОВО-ПРОМЫШЛЕННЫЙ УНИВЕРСИТЕТ «СИНЕРГИЯ»»",
+          bold=True)
+    _para(doc)
+
+    # --- факультет ---
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p.paragraph_format.first_line_indent = Cm(0)
+    p.paragraph_format.line_spacing = 1.0
+    r1 = p.add_run("Факультет ")
+    r1.font.name = TNR
+    r1.font.size = Pt(15)
+    r2 = p.add_run("Информационных технологий")
+    r2.font.name = TNR
+    r2.font.size = Pt(15)
+    r2.underline = True
+
+    # --- таблица «Направление / Кафедра / Профиль» (как в ВКР) ---
+    t = doc.add_table(rows=3, cols=4)
+    _no_borders(t)
+    t.autofit = False
+    widths = (Cm(3.2), Cm(8.0), Cm(2.1), Cm(3.2))
+    for row in t.rows:
+        for cell, w in zip(row.cells, widths):
+            cell.width = w
+
+    _cell_para(t.rows[0].cells[0], "Направление подготовки:", bold=True,
+               align=WD_ALIGN_PARAGRAPH.LEFT)
+    c = t.rows[0].cells[1]
+    _cell_para(c, "09.03.02 Информационные системы и технологии")
+    _cell_bottom_border(c)
+    _cell_para(t.rows[0].cells[2], "Кафедра", bold=True,
+               align=WD_ALIGN_PARAGRAPH.LEFT)
+    c = t.rows[0].cells[3]
+    _cell_para(c, "ИИиАД")
+    _cell_bottom_border(c)
+
+    _cell_para(t.rows[1].cells[0], "(код, наименование)", italic=True,
+               size=10, superscript=True)
+    _cell_para(t.rows[1].cells[3], "(аббревиатура)", italic=True,
+               size=10, superscript=True)
+
+    _cell_para(t.rows[2].cells[0], "Профиль:", bold=True,
+               align=WD_ALIGN_PARAGRAPH.LEFT)
+    merged = t.rows[2].cells[1].merge(t.rows[2].cells[3])
+    _cell_para(merged, "Разработка, сопровождение и обеспечение "
+                       "безопасности информационных систем")
+    _cell_bottom_border(merged)
+
+    _para(doc)
+
+    # --- тип работы ---
+    _para(doc, "ОТЧЕТ ПО ЛАБОРАТОРНОЙ РАБОТЕ № " + str(lab_number),
+          bold=True, size=16, after=6)
+    _para(doc, "по дисциплине «" + discipline + "»", bold=True, after=6)
+
+    # --- таблица «на тему» (как в ВКР) ---
+    t2 = doc.add_table(rows=1, cols=2)
+    _no_borders(t2)
+    t2.autofit = False
+    t2.rows[0].cells[0].width = Cm(3.2)
+    t2.rows[0].cells[1].width = Cm(13.3)
+    _cell_para(t2.rows[0].cells[0], "на тему", bold=True, size=14,
+               align=WD_ALIGN_PARAGRAPH.LEFT)
+    c = t2.rows[0].cells[1]
+    _cell_para(c, topic, bold=True, size=12)
+    _cell_bottom_border(c)
+
+    _para(doc)
+
+    # --- таблица участников (как в ВКР) ---
+    t3 = doc.add_table(rows=5, cols=2)
+    _no_borders(t3)
+    t3.autofit = False
+    for row in t3.rows:
+        row.cells[0].width = Cm(5.5)
+        row.cells[1].width = Cm(11.0)
+
+    _cell_para(t3.rows[0].cells[0], "Обучающийся", bold=True,
+               align=WD_ALIGN_PARAGRAPH.LEFT)
+    _cell_para(t3.rows[0].cells[1], student, bold=True, italic=True)
+    _cell_para(t3.rows[1].cells[0], "(Фамилия Имя Отчество)", italic=True,
+               size=8)
+    _cell_para(t3.rows[1].cells[1], "(подпись)", italic=True, size=8)
+
+    _cell_para(t3.rows[2].cells[0], "Группа", bold=True,
+               align=WD_ALIGN_PARAGRAPH.LEFT)
+    _cell_para(t3.rows[2].cells[1], group, bold=True, italic=True)
+
+    _cell_para(t3.rows[3].cells[0], "Преподаватель", bold=True,
+               align=WD_ALIGN_PARAGRAPH.LEFT)
+    _cell_para(t3.rows[3].cells[1], teacher if teacher else "", bold=True,
+               italic=True)
+    _cell_para(t3.rows[4].cells[0], "(Фамилия Имя Отчество)", italic=True,
+               size=8)
+    _cell_para(t3.rows[4].cells[1], "(подпись)", italic=True, size=8)
+
+    for _ in range(2):
+        _para(doc)
+
+    # --- город и год (как в ВКР: МОСКВА 20XX г., год подчёркнут) ---
+    # «МОСКВА» прижата к низу страницы отступом сверху абзаца
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p.paragraph_format.first_line_indent = Cm(0)
+    p.paragraph_format.line_spacing = 1.0
+    p.paragraph_format.space_before = Pt(220)
+    r = p.add_run("МОСКВА ")
+    r.bold = True
+    r.font.name = TNR
+    r.font.size = Pt(14)
+    r = p.add_run(str(year))
+    r.bold = True
     r.underline = True
-    _tp(doc)
-    _tp(doc)
-    _tp(doc)
-    # исполнители
-    p = doc.add_paragraph(style="TitlePage")
-    p.add_run("Обучающийся: ").bold = True
-    p.add_run(" " + student + " ").underline = True
-    _tp(doc, "(Фамилия Имя Отчество)                                    (подпись)",
-        small=True)
-    p = doc.add_paragraph(style="TitlePage")
-    p.add_run("Группа: ").bold = True
-    p.add_run(" " + group + " ").underline = True
-    p = doc.add_paragraph(style="TitlePage")
-    p.add_run("Преподаватель: ").bold = True
-    p.add_run(" " + (teacher if teacher else " " * 30) + " ").underline = True
-    _tp(doc, "(Фамилия Имя Отчество)                                    (подпись)",
-        small=True)
-    _tp(doc)
-    _tp(doc)
-    _tp(doc)
-    _tp(doc, "Москва " + str(year) + " г.", bold=True)
+    r.font.name = TNR
+    r.font.size = Pt(14)
+    r = p.add_run(" г.")
+    r.bold = True
+    r.font.name = TNR
+    r.font.size = Pt(14)
 
 
 # ------------------------------------------------------------------
@@ -424,16 +534,14 @@ class SynergyReport:
         self.doc.add_picture(image_path, width=Cm(width_cm))
         self.doc.paragraphs[-1].alignment = WD_ALIGN_PARAGRAPH.CENTER
         cap = self.doc.add_paragraph(style="Image Caption")
-        cap.add_run("Рисунок %d. %s" % (self.fig_n, caption))
+        cap.add_run("Рисунок %d — %s" % (self.fig_n, caption))
         return self.fig_n
 
     def table(self, rows, caption=None, header=True, font_size=12):
         if caption:
             self.tab_n += 1
             tc = self.doc.add_paragraph(style="Table Caption")
-            tc.add_run("Таблица %d" % self.tab_n)
-            tt = self.doc.add_paragraph(style="Table Title")
-            tt.add_run(caption.rstrip(".") + ".")
+            tc.add_run("Таблица %d — %s" % (self.tab_n, caption.rstrip(".")))
         n_cols = len(rows[0])
         tbl = self.doc.add_table(rows=len(rows), cols=n_cols)
         try:
