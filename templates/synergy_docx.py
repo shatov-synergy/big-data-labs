@@ -44,7 +44,8 @@ MONO = "Courier New"
 
 def _set_style_font(style, font_name, size_pt, bold=None, italic=None,
                     color=None, underline=None):
-    """Явно прописывает шрифт во всех слотах rFonts (ascii/hAnsi/cs/eastAsia)."""
+    """Прописывает шрифт во всех слотах rFonts и УБИРАЕТ ссылки на тему —
+    иначе Word подменяет шрифт Calibri (majorHAnsi/minorHAnsi)."""
     style.font.name = font_name
     style.font.size = Pt(size_pt)
     if bold is not None:
@@ -60,8 +61,44 @@ def _set_style_font(style, font_name, size_pt, bold=None, italic=None,
     if r_fonts is None:
         r_fonts = OxmlElement("w:rFonts")
         r_pr.append(r_fonts)
+    for attr in ("w:asciiTheme", "w:hAnsiTheme", "w:cstheme", "w:eastAsiaTheme"):
+        if r_fonts.get(qn(attr)) is not None:
+            del r_fonts.attrib[qn(attr)]
     for attr in ("w:ascii", "w:hAnsi", "w:cs", "w:eastAsia"):
         r_fonts.set(qn(attr), font_name)
+
+
+def _set_doc_defaults(doc, font_name=TNR, size_pt=14):
+    """docDefaults документа: Times New Roman, 14 пт — шрифт по умолчанию
+    для любых прогонов без явного форматирования."""
+    styles_el = doc.styles.element
+    dd = styles_el.find(qn("w:docDefaults"))
+    if dd is None:
+        dd = OxmlElement("w:docDefaults")
+        styles_el.insert(0, dd)
+    rprd = dd.find(qn("w:rPrDefault"))
+    if rprd is None:
+        rprd = OxmlElement("w:rPrDefault")
+        dd.append(rprd)
+    rpr = rprd.find(qn("w:rPr"))
+    if rpr is None:
+        rpr = OxmlElement("w:rPr")
+        rprd.append(rpr)
+    r_fonts = rpr.find(qn("w:rFonts"))
+    if r_fonts is None:
+        r_fonts = OxmlElement("w:rFonts")
+        rpr.insert(0, r_fonts)
+    for attr in ("w:asciiTheme", "w:hAnsiTheme", "w:cstheme", "w:eastAsiaTheme"):
+        if r_fonts.get(qn(attr)) is not None:
+            del r_fonts.attrib[qn(attr)]
+    for attr in ("w:ascii", "w:hAnsi", "w:cs", "w:eastAsia"):
+        r_fonts.set(qn(attr), font_name)
+    for tag, val in (("w:sz", str(int(size_pt * 2))), ("w:szCs", str(int(size_pt * 2)))):
+        el = rpr.find(qn(tag))
+        if el is None:
+            el = OxmlElement(tag)
+            rpr.append(el)
+        el.set(qn("w:val"), val)
 
 
 def _get_or_add_style(doc, name, style_type=WD_STYLE_TYPE.PARAGRAPH, base="Normal"):
@@ -136,6 +173,9 @@ def configure_page(doc):
 
 def configure_styles(doc):
     """Все стили по стандартам Синергии (клон ВКР)."""
+    # сначала шрифт документа по умолчанию — Times New Roman 14
+    _set_doc_defaults(doc, TNR, 14)
+
     # --- Normal: TNR 14, 1.5, по ширине, красная строка 1,25 ---
     normal = doc.styles["Normal"]
     _set_style_font(normal, TNR, 14, color=(0, 0, 0))

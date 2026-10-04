@@ -68,13 +68,21 @@ LibreOffice ставится во временный контейнер (~2 ми
 
 ## 5. Контроль качества
 
+- `python templates/check_fonts.py <файл>.docx` — все стили ГОСТ в самом
+  документе (docDefaults и Normal/Headings/Captions = Times New Roman,
+  без theme-атрибутов, код = Courier New); выход «ВСЕ СТИЛИ
+  СООТВЕТСТВУЮТ ГОСТ».
 - `python <путь к docx-скиллу>/scripts/postcheck.py <файл>.docx` — 0 ошибок.
 - Выборочная визуальная проверка: pdftoppm первой страницы (титульник) и
   страницы с таблицей/рисунком.
-- Убрать временные файлы проверок (`_chk*`, `_verify`).
+- Убрать временные файлы проверок (`_chk*`, `_verify`, `_h*`, `_s*`).
 
 ## Частые ошибки
 
+- Заголовки/текст в Calibri — в стилях остались theme-атрибуты
+  (asciiTheme и пр.). Лечится в `templates/synergy_docx.py`
+  (`_set_style_font` удаляет их) + `python templates/build_templates.py`
+  + перерендер. Проверка: `python templates/check_fonts.py <файл>.docx`.
 - `there is no package called 'X'` — добавить пакет в `docker/install_pkgs.R`
   и пересобрать образ `docker compose build`.
 - Картинка не по центру — титульник/центрирование применяются ТОЛЬКО
