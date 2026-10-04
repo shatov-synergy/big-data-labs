@@ -9,7 +9,7 @@ synergy_docx.py — единый модуль стандартов оформл�
   Страница     A4 портрет; поля: верх 2 см, низ 2 см, лево 3 см, право 1,5 см;
                колонтитулы 1,25 см (страница не нумеруется на титульном листе).
   Обычный текст Times New Roman 14 пт, полуторный интервал,
-               выравнивание по ширине, красная строка 1,5 см.
+               выравнивание по ширине, красная строка 1,25 см.
   Заголовок 1  Times New Roman 16 пт, полужирный, по центру, с новой страницы.
   Заголовок 2  Times New Roman 14 пт, полужирный, по центру.
   Заголовок 3  Times New Roman 14 пт, полужирный, слева.
@@ -100,7 +100,7 @@ def configure_styles(doc):
     pf = normal.paragraph_format
     pf.line_spacing = 1.5
     pf.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    pf.first_line_indent = Cm(1.5)
+    pf.first_line_indent = Cm(1.25)
     pf.space_before = Pt(0)
     pf.space_after = Pt(0)
 

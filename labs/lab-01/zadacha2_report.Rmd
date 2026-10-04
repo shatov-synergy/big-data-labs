@@ -1,0 +1,322 @@
+---
+title: "Отчет по лабораторной работе № 1. Задача 2"
+output:
+  word_document:
+    reference_docx: reference.docx
+knit: (function(input, ...) { rmarkdown::render(input, output_dir = "output", ...) })
+---
+
+::: {custom-style="TitlePage"}
+НЕГОСУДАРСТВЕННОЕ ОБРАЗОВАТЕЛЬНОЕ ЧАСТНОЕ
+
+УЧРЕЖДЕНИЕ ВЫСШЕГО ОБРАЗОВАНИЯ
+
+«МОСКОВСКИЙ ФИНАНСОВО-ПРОМЫШЛЕННЫЙ УНИВЕРСИТЕТ «СИНЕРГИЯ»»
+
+Институт информационных технологий
+
+Направление подготовки: 09.03.02 Информационные системы и технологии
+
+Форма обучения: очная
+:::
+
+::: {custom-style="TitlePage"}
+ОТЧЕТ
+
+по лабораторной работе № 1
+
+по дисциплине «Продвинутые технологии работы с большими данными»
+
+на тему: «Задача 2. Разведочный анализ данных на основе датасета mtcars»
+:::
+
+::: {custom-style="TitlePage"}
+Обучающийся: Шатов Илья Андреевич
+
+Группа: ВБИо-403-рсоб
+
+Преподаватель: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+:::
+
+::: {custom-style="TitlePage"}
+Москва 2026 г.
+:::
+
+# Задача 2. Разведочный анализ данных на основе датасета mtcars {#задача2}
+
+**Условие.** Загрузите встроенный датасет `mtcars` и выполните его
+комплексный статистический анализ средствами `dplyr`, `tidyr`, `broom`
+и `plotly`: рассчитайте описательные статистики (среднее, медиану, моду,
+стандартное отклонение, минимум, максимум) для всех переменных, реализовав
+функцию вычисления выборочной моды; постройте график плотности
+распределения `mpg`, совместив гистограмму, ядерную оценку плотности и
+теоретическую кривую нормального распределения; выполните проверку
+нормальности через QQ-plot и тест Шапиро–Уилка; постройте boxplot с
+отображением всех точек и выявите выбросы методом межквартильного
+размаха (IQR); выполните группировку по числу цилиндров средствами
+`dplyr` с визуализацией групповых статистик; проверьте гипотезу о
+равенстве средних `mpg` между автомобилями с 4 и 6 цилиндрами
+(t-тест); выполните однофакторный дисперсионный анализ (ANOVA) по трём
+группам цилиндров с пост-хок тестом Тьюки (Tukey HSD) и визуализацией
+попарных различий с выделением значимых контрастов цветом.
+
+## Ход решения
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
+                      fig.width = 8, fig.height = 4.8)
+library(dplyr)
+library(tidyr)
+library(broom)
+library(ggplot2)
+data(mtcars)
+```
+
+### Описательные статистики и расчёт моды
+
+Функция выборочной моды реализована вручную: среди уникальных значений
+выбирается то, которое встречается чаще всего.
+
+::: {custom-style="TableCaptionLine"}
+Таблица 1. Описательные статистики переменных mtcars
+:::
+
+```{r mode}
+get_mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+modes <- sapply(mtcars, get_mode)
+
+extended_stats <- data.frame(
+  Variable = names(mtcars),
+  Mean     = round(sapply(mtcars, mean), 2),
+  Median   = sapply(mtcars, median),
+  Mode     = modes,
+  SD       = round(sapply(mtcars, sd), 2),
+  Min      = sapply(mtcars, min),
+  Max      = sapply(mtcars, max),
+  row.names = NULL
+)
+knitr::kable(extended_stats)
+```
+
+**Вывод.** По данным таблицы 1, средний расход —
+`r round(mean(mtcars$mpg), 2)` миль на галлон при медиане
+`r median(mtcars$mpg)` и стандартном отклонении
+`r round(sd(mtcars$mpg), 2)`. Медиана меньше среднего, что указывает на
+правую асимметрию распределения `mpg`; мода расхода —
+`r get_mode(mtcars$mpg)` mpg, мода числа цилиндров —
+`r get_mode(mtcars$cyl)`, мода числа карбюраторов —
+`r get_mode(mtcars$carb)`.
+
+### Плотность распределения mpg
+
+Гистограмма, ядерная оценка плотности и теоретическая нормальная кривая
+совмещены на рисунке 1 (интерактивная версия построена средствами
+`plotly` и сохранена в `output/task2_density_mpg.html`).
+
+```{r density, fig.cap="Рисунок 1. Плотность распределения mpg: гистограмма, ядерная оценка и нормальная кривая"}
+dfn <- data.frame(x = seq(min(mtcars$mpg), max(mtcars$mpg), length.out = 200))
+dfn$y <- dnorm(dfn$x, mean = mean(mtcars$mpg), sd = sd(mtcars$mpg))
+ggplot(mtcars, aes(x = mpg)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 10,
+                 fill = scales::alpha("#6496DC", 0.55), color = "white") +
+  geom_density(color = "#d62728", linewidth = 1) +
+  geom_line(data = dfn, aes(x, y), color = "green",
+            linetype = "dashed", linewidth = 0.9) +
+  labs(title = "Плотность распределения mpg",
+       x = "mpg (миль на галлон)", y = "Плотность вероятности")
+```
+
+**Вывод.** Ядерная оценка плотности (рисунок 1) повторяет форму
+гистограммы; нормальная кривая с теми же средним и дисперсией проходит
+близко, но не идеальна — распределение слегка многовершинное, что
+типично для смеси групп с разным числом цилиндров.
+
+### Проверка нормальности: QQ-plot и тест Шапиро–Уилка
+
+QQ-plot для `mpg` представлен на рисунке 2.
+
+```{r qq, fig.cap="Рисунок 2. QQ-plot для mpg"}
+qq_data <- as.data.frame(qqnorm(mtcars$mpg, plot.it = FALSE))
+qq_data$line <- fitted(lm(y ~ x, data = qq_data))
+ggplot(qq_data, aes(x, y)) +
+  geom_point(color = "#1f77b4", size = 2.5) +
+  geom_line(aes(y = line), color = "red") +
+  labs(title = "QQ-plot для mpg",
+       x = "Теоретические квантили (нормальное)",
+       y = "Выборочные квантили (mpg)")
+```
+
+```{r shapiro}
+shapiro_res <- shapiro.test(mtcars$mpg)
+print(shapiro_res)
+```
+
+**Гипотезы.** H~0~ — распределение `mpg` нормально; H~1~ — не нормально.
+
+**Интерпретация.** Статистика Шапиро–Уилка
+W = `r round(unname(shapiro_res$statistic), 4)`, p-значение =
+`r round(shapiro_res$p.value, 4)` > 0.05 — данных против H~0~
+недостаточно; точки QQ-plot (рисунок 2) лежат близко к опорной прямой.
+
+**Вывод.** На уровне значимости 0.05 гипотеза о нормальности `mpg` не
+отвергается — параметрические методы (t-тест, ANOVA) применимы.
+
+### Boxplot и выбросы методом IQR
+
+Ящик с усами с отображением всех наблюдений приведён на рисунке 3.
+
+```{r box, fig.cap="Рисунок 3. Boxplot mpg с отображением всех точек"}
+ggplot(mtcars, aes(x = "", y = mpg)) +
+  geom_boxplot(fill = scales::alpha("#FFB4B4", 0.4), color = "#d62728",
+               outlier.shape = NA) +
+  geom_jitter(width = 0.12, size = 2.3, color = "#2ca02c") +
+  labs(title = "Boxplot для mpg", x = NULL, y = "mpg") +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+```
+
+Границы нормы и список автомобилей-выбросов определяются по правилу
+1.5·IQR:
+
+```{r iqr}
+Q1 <- quantile(mtcars$mpg, 0.25)
+Q3 <- quantile(mtcars$mpg, 0.75)
+IQR_val <- Q3 - Q1
+lower_bound <- Q1 - 1.5 * IQR_val
+upper_bound <- Q3 + 1.5 * IQR_val
+
+cat(sprintf("Q1 = %.2f, Q3 = %.2f, IQR = %.2f\n", Q1, Q3, IQR_val))
+cat(sprintf("Границы нормы: [%.2f ; %.2f]\n", lower_bound, upper_bound))
+
+out_rows <- mtcars[mtcars$mpg < lower_bound | mtcars$mpg > upper_bound,
+                   c("mpg", "cyl", "hp")]
+out_cars <- rownames(out_rows)
+cat("Автомобили-выбросы:", paste(out_cars, collapse = ", "), "\n")
+knitr::kable(out_rows)
+```
+
+**Вывод.** По рисунку 3 и расчёту, границы нормы составляют
+[`r round(lower_bound, 2)`; `r round(upper_bound, 2)`] миль на галлон.
+Выброс один — `r out_cars` (`r out_rows$mpg[1]` mpg, 4 цилиндра,
+`r out_rows$hp[1]` л.с.): экономичный компактный автомобиль на фоне
+мощных машин выборки. Выброс отражает реальное свойство объекта, ошибкой
+данных не является и из анализа не удаляется.
+
+### Группировка по числу цилиндров (dplyr)
+
+Групповые статистики, рассчитанные цепочкой `group_by()` +
+`summarise()`, приведены в таблице 2.
+
+::: {custom-style="TableCaptionLine"}
+Таблица 2. Групповые статистики mpg по числу цилиндров
+:::
+
+```{r group}
+group_stats <- mtcars %>%
+  group_by(cyl) %>%
+  summarise(n = n(), mean_mpg = mean(mpg), median_mpg = median(mpg),
+            sd_mpg = sd(mpg), .groups = "drop")
+knitr::kable(group_stats, digits = 2)
+```
+
+Средние по группам со стандартными отклонениями визуализированы на
+рисунке 4.
+
+```{r group-plot, fig.cap="Рисунок 4. Средний mpg по группам цилиндров (± SD)"}
+ggplot(group_stats, aes(x = factor(cyl), y = mean_mpg, fill = factor(cyl))) +
+  geom_col(width = 0.6) +
+  geom_errorbar(aes(ymin = mean_mpg - sd_mpg, ymax = mean_mpg + sd_mpg),
+                width = 0.15, color = "#333333") +
+  scale_fill_manual(values = c("#1f77b4", "#ff7f0e", "#2ca02c")) +
+  labs(title = "Средний mpg по группам цилиндров (± SD)",
+       x = "Число цилиндров", y = "Средний mpg") +
+  theme(legend.position = "none")
+```
+
+**Вывод.** По таблице 2 и рисунку 4 средний расход закономерно падает с
+ростом числа цилиндров: `r round(group_stats$mean_mpg[1], 1)` →
+`r round(group_stats$mean_mpg[2], 1)` → `r round(group_stats$mean_mpg[3], 1)`
+миль на галлон для 4/6/8 цилиндров. Группы невелики
+(n = `r paste(group_stats$n, collapse = "/")`), поэтому стандартные
+отклонения существенны, особенно в группе с 4 цилиндрами.
+
+### t-тест: 4 против 6 цилиндров
+
+```{r ttest}
+t_res <- t.test(mpg ~ cyl, data = mtcars %>% filter(cyl %in% c(4, 6)))
+print(t_res)
+```
+
+**Гипотезы.** H~0~ — средний `mpg` автомобилей с 4 и 6 цилиндрами
+одинаков; H~1~ — различается.
+
+**Интерпретация.** t-статистика = `r round(unname(t_res$statistic), 3)`,
+p-значение = `r format(t_res$p.value, digits = 3)` < 0.05; 95 %-й
+доверительный интервал разности средних
+[`r round(t_res$conf.int[1], 2)`; `r round(t_res$conf.int[2], 2)`] не
+содержит нуля.
+
+**Вывод.** Нулевая гипотеза отвергается: средний `mpg` автомобилей с 4
+цилиндрами статистически значимо выше, чем с 6 (разница около
+`r round(diff(rev(t_res$estimate)), 1)` миль на галлон).
+
+### Однофакторный ANOVA и тест Тьюки
+
+```{r anova}
+mtcars$cyl_f <- factor(mtcars$cyl)
+anova_res <- aov(mpg ~ cyl_f, data = mtcars)
+print(summary(anova_res))
+
+tukey_res <- TukeyHSD(anova_res)
+print(tukey_res)
+```
+
+Попарные различия средних по тесту Тьюки визуализированы на рисунке 5;
+значимые контрасты (p adj < 0.05) выделены тёмным цветом.
+
+```{r tukey-plot, fig.cap="Рисунок 5. Tukey HSD: попарные различия средних mpg"}
+tukey_df <- as.data.frame(tukey_res$cyl_f)
+tukey_df$comparison <- rownames(tukey_df)
+tukey_df$half <- (tukey_df$upr - tukey_df$lwr) / 2
+ggplot(tukey_df, aes(x = comparison, y = diff, fill = `p adj` < 0.05)) +
+  geom_col(width = 0.6) +
+  geom_errorbar(aes(ymin = diff - half, ymax = diff + half),
+                width = 0.15, color = "#333333") +
+  scale_fill_manual(values = c("#7f7f7f", "#d62728"),
+                    labels = c("p >= 0.05", "p < 0.05")) +
+  labs(title = "Tukey HSD: попарные различия средних mpg",
+       x = "Сравнение групп", y = "Разница средних", fill = "") +
+  theme(legend.position = "top")
+```
+
+**Гипотезы.** H~0~ — средний `mpg` во всех трёх группах цилиндров
+одинаков; H~1~ — хотя бы в одной группе отличается.
+
+**Интерпретация.** F-статистика ANOVA =
+`r round(unname(summary(anova_res)[[1]][1, 4]), 2)` при p-значении
+`r format.pval(unname(summary(anova_res)[[1]][1, 5]), digits = 4)`
+< 0.05. Пост-хок тест Тьюки (рисунок 5) показывает значимость всех трёх
+попарных контрастов (все p adj < 0.05).
+
+**Вывод.** Число цилиндров значимо влияет на расход топлива; все
+попарные различия средних статистически значимы, наибольшая разница —
+между 8 и 4 цилиндрами
+(`r abs(round(tukey_df$diff[tukey_df$comparison == "8-4"], 1))` миль
+на галлон).
+
+# Выводы
+
+В ходе выполнения задачи 2 проведён комплексный статистический анализ
+датасета mtcars: рассчитаны описательные статистики всех 11 переменных с
+ручной реализацией выборочной моды (таблица 1); построена плотность
+распределения `mpg` (рисунок 1); нормальность подтверждена QQ-plot и
+тестом Шапиро–Уилка (W = `r round(unname(shapiro_res$statistic), 4)`,
+p = `r round(shapiro_res$p.value, 4)`); по методу IQR найден один
+выброс — Toyota Corolla (рисунок 3); группировка по цилиндрам (таблица 2,
+рисунок 4) показала монотонное снижение расхода с ростом числа
+цилиндров; t-тест (p = `r format(t_res$p.value, digits = 3)`) и ANOVA
+с тестом Тьюки (рисунок 5) статистически значимо подтвердили различия
+между всеми группами.

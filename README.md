@@ -26,12 +26,13 @@ docker compose up -d --build
 assignments/          исходные задания (docx) по каждой работе
 labs/
   lab-01/             лабораторная работа 1
-    task1_diamonds.R  задание 1: визуализация diamonds
-    task2_mtcars.R    задание 2: статистический анализ mtcars
-    task3_tesla.R     задание 3: временной ряд Tesla
-    lab01_report.Rmd  отчёт (R Markdown -> html/docx в стандартах Синергии)
-    reference.docx    стили отчёта (Times New Roman 14, поля 2/1,5/2/3)
-    output/           результаты: графики, html, итоговые csv
+    task1_diamonds.R  задача 1: визуализация diamonds
+    task2_mtcars.R    задача 2: статистический анализ mtcars
+    task3_tesla.R     задача 3: временной ряд Tesla
+    zadacha{1,2,3}_report.Rmd  отчёты по каждой задаче (R Markdown -> docx)
+    reference.docx    стили отчёта (Times New Roman 14, поля 2/1,5/2/3,
+                      красная строка 1,25)
+    output/           результаты: графики, html, отчёты docx+pdf
 data/                 кэш данных (котировки TSLA и пр.)
 templates/            ЕДИНАЯ СИСТЕМА ОФОРМЛЕНИЯ ОТЧЁТОВ (см. ниже)
 docker/               служебные скрипты образа
@@ -66,15 +67,24 @@ docker/               служебные скрипты образа
 (`Ctrl+Shift+Enter` — строка, `Ctrl+Shift+S` — весь файл).
 Скрипты пишут графики в `labs/lab-01/output/`.
 
-Отчёт: откройте `lab01_report.Rmd` → `Knit` (получите
-`output/lab01_report.html` и `output/lab01_report.docx`).
-
-Headless-прогон (без интерфейса):
+Отчёты: по **каждой задаче** — отдельный файл `zadachaN_report.Rmd`.
+Кнопка `Knit` в RStudio собирает docx в стилях Синергии.
+По требованиям дисциплины результат сдаётся в **docx и pdf**:
 
 ```bash
+# docx (внутри контейнера или в RStudio)
 docker compose run --rm rstudio bash -lc \
-  "cd labs/lab-01 && Rscript task1_diamonds.R"
+  "cd labs/lab-01 && Rscript -e 'rmarkdown::render(\"zadacha1_report.Rmd\", output_dir = \"output\")'"
+
+# pdf — конвертация docx (LibreOffice)
+docker compose run --rm rstudio bash -lc \
+  "apt-get update -qq && apt-get install -y -qq libreoffice-writer && \
+   cd labs/lab-01/output && soffice --headless --convert-to pdf \
+   'Laboratornyiy praktikum 1_Задача 1_отчет.docx'"
 ```
+
+Готовые файлы для сдачи лежат в `labs/lab-01/output/`:
+`Laboratornyiy praktikum 1_Задача {1,2,3}_отчет.docx` и `.pdf`.
 
 ## Особенности сети
 

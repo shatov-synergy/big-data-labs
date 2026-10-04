@@ -37,7 +37,7 @@ def build_report_template():
     )
     doc.add_heading("1 {Название первого раздела}", level=1)
     doc.add_paragraph("{Текст отчёта. Times New Roman 14, полуторный "
-                      "интервал, по ширине, красная строка 1,5 см.}")
+                      "интервал, по ширине, красная строка 1,25 см.}")
     path = os.path.join(BASE, "report_template.docx")
     doc.save(path)
     print("OK:", path)
