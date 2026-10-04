@@ -1,0 +1,15 @@
+services:
+  rstudio:
+    build: .
+    container_name: rstudio-bigdata
+    environment:
+      USER: ${RSTUDIO_USER:-rstudio}
+      PASSWORD: ${RSTUDIO_PASSWORD:-bigdata}
+    ports:
+      - "127.0.0.1:8787:8787"
+    volumes:
+      # весь репозиторий монтируется в контейнер:
+      # скрипты и результаты лабораторных сразу попадают в git
+      - ./:/home/rstudio/project
+    working_dir: /home/rstudio/project
+    shm_size: 1gb
