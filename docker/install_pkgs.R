@@ -23,7 +23,7 @@ for (m in mirrors) {
 
 pkgs <- c("plotly", "quantmod", "forecast", "tseries", "moments",
           "lmtest", "rugarch", "isotree", "dbscan", "lazyeval",
-          "zoo", "FinTS", "outliers", "htmlwidgets")
+          "zoo", "FinTS", "outliers", "htmlwidgets", "broom")
 
 install.packages(pkgs, Ncpus = 2)
 

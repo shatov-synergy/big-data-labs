@@ -212,6 +212,10 @@ data(mtcars)
 
 ### Описательные статистики и расчёт моды
 
+::: {custom-style="TableCaptionLine"}
+Таблица 1. Описательные статистики переменных mtcars
+:::
+
 ```{r t2-mode}
 # Функция для вычисления выборочной моды
 get_mode <- function(x) {
@@ -231,7 +235,7 @@ extended_stats <- data.frame(
   Max      = sapply(mtcars, max),
   row.names = NULL
 )
-knitr::kable(extended_stats, caption = "Описательные статистики переменных mtcars")
+knitr::kable(extended_stats)
 ```
 
 **Вывод.** Средний расход — `r round(mean(mtcars$mpg), 2)` миль на
@@ -246,7 +250,7 @@ dfn <- data.frame(x = seq(min(mtcars$mpg), max(mtcars$mpg), length.out = 200))
 dfn$y <- dnorm(dfn$x, mean = mean(mtcars$mpg), sd = sd(mtcars$mpg))
 ggplot(mtcars, aes(x = mpg)) +
   geom_histogram(aes(y = after_stat(density)), bins = 10,
-                 fill = "rgba(100,150,220,0.55)", color = "white") +
+                 fill = scales::alpha("#6496DC", 0.55), color = "white") +
   geom_density(color = "#d62728", linewidth = 1) +
   geom_line(data = dfn, aes(x, y), color = "green",
             linetype = "dashed", linewidth = 0.9) +
@@ -298,11 +302,11 @@ H~0~ недостаточно.
 ### Boxplot и выбросы методом IQR
 
 ```{r t2-box-static, fig.cap="Рисунок 10. Boxplot mpg с отображением всех точек"}
-ggplot(mtcars, aes(y = mpg)) +
-  geom_boxplot(fill = "rgba(255,180,180,0.4)", color = "#d62728",
+ggplot(mtcars, aes(x = "", y = mpg)) +
+  geom_boxplot(fill = scales::alpha("#FFB4B4", 0.4), color = "#d62728",
                outlier.shape = NA) +
-  geom_jitter(width = 0.15, size = 2.3, color = "#2ca02c") +
-  labs(title = "Boxplot для mpg", y = "mpg") +
+  geom_jitter(width = 0.12, size = 2.3, color = "#2ca02c") +
+  labs(title = "Boxplot для mpg", x = NULL, y = "mpg") +
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
 ```
 
@@ -330,14 +334,16 @@ knitr::kable(out_rows)
 
 ### Группировка по числу цилиндров (dplyr)
 
+::: {custom-style="TableCaptionLine"}
+Таблица 2. Групповые статистики mpg по числу цилиндров
+:::
+
 ```{r t2-group}
 group_stats <- mtcars %>%
   group_by(cyl) %>%
   summarise(n = n(), mean_mpg = mean(mpg), median_mpg = median(mpg),
             sd_mpg = sd(mpg), .groups = "drop")
-knitr::kable(group_stats,
-             caption = "Групповые статистики mpg по числу цилиндров",
-             digits = 2)
+knitr::kable(group_stats, digits = 2)
 ```
 
 ```{r t2-group-static, fig.cap="Рисунок 11. Средний mpg по группам цилиндров (± SD)"}
@@ -407,8 +413,8 @@ ggplot(tukey_df, aes(x = comparison, y = diff,
 одинаков; H~1~ — хотя бы в одной группе отличается.
 
 **Интерпретация.** F-статистика ANOVA =
-`r round(unname(summary(anova_res)[[1]]$`F value`[1]), 2)` при p
-`r format.pval(unname(summary(anova_res)[[1]]$`Pr(>F)`[1]), digits = 4)`
+`r round(unname(summary(anova_res)[[1]][1, 4]), 2)` при p
+`r format.pval(unname(summary(anova_res)[[1]][1, 5]), digits = 4)`
 < 0.05. Пост-хок тест Тьюки показывает значимость всех трёх парных
 контрастов (все p adj < 0.05).
 
@@ -523,6 +529,10 @@ cat(sprintf("Календарных торговых дней: %d, из них �
 
 ### Проверка стационарности
 
+::: {custom-style="TableCaptionLine"}
+Таблица 3. Результаты тестов стационарности
+:::
+
 ```{r t3-tests, collapse=TRUE}
 adf_log  <- adf.test(na.omit(df$logClose))
 kpss_log <- kpss.test(na.omit(df$logClose))
@@ -539,7 +549,7 @@ stat_tbl <- data.frame(
                       adf_ret$p.value, kpss_ret$p.value, pp_ret$p.value), 4),
   check.names = FALSE
 )
-knitr::kable(stat_tbl, caption = "Результаты тестов стационарности")
+knitr::kable(stat_tbl)
 ```
 
 **Гипотезы.** ADF и PP: H~0~ — ряд содержит единичный корень
@@ -591,6 +601,10 @@ plot(stl_fit)
 Статистические методы (IQR, z-score, модифицированный z-score) и
 алгоритмы машинного обучения (Isolation Forest, LOF, DBSCAN):
 
+::: {custom-style="TableCaptionLine"}
+Таблица 4. Число аномалий по методам
+:::
+
 ```{r t3-anomalies}
 q1 <- quantile(df$ret, .25, na.rm = TRUE)
 q3 <- quantile(df$ret, .75, na.rm = TRUE)
@@ -617,7 +631,7 @@ methods_tbl <- data.frame(
   Аномалий = c(length(out_iqr), length(out_z), length(out_mz),
                length(out_iso), length(out_lof), length(out_dbscan))
 )
-knitr::kable(methods_tbl, caption = "Число аномалий по методам")
+knitr::kable(methods_tbl)
 
 df$anomaly <- FALSE
 df$anomaly[out_iqr] <- TRUE

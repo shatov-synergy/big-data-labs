@@ -13,6 +13,7 @@ RUN apt-get update \
       cmake \
       libcurl4-openssl-dev \
       libxml2-dev \
+      libuv1-dev \
   && rm -rf /var/lib/apt/lists/*
 
 # Пакеты, необходимые для лабораторных работ (задачи 2 и 3).
