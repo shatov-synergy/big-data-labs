@@ -7,39 +7,83 @@ knit: (function(input, ...) { rmarkdown::render(input, output_dir = "output", ..
 ---
 
 ::: {custom-style="TitlePage"}
-НЕГОСУДАРСТВЕННОЕ ОБРАЗОВАТЕЛЬНОЕ ЧАСТНОЕ
+**НЕГОСУДАРСТВЕННОЕ ОБРАЗОВАТЕЛЬНОЕ ЧАСТНОЕ УЧРЕЖДЕНИЕ ВЫСШЕГО ОБРАЗОВАНИЯ**
 
-УЧРЕЖДЕНИЕ ВЫСШЕГО ОБРАЗОВАНИЯ
-
-«МОСКОВСКИЙ ФИНАНСОВО-ПРОМЫШЛЕННЫЙ УНИВЕРСИТЕТ «СИНЕРГИЯ»»
-
-Институт информационных технологий
-
-Направление подготовки: 09.03.02 Информационные системы и технологии
-
-Форма обучения: очная
+**«МОСКОВСКИЙ ФИНАНСОВО-ПРОМЫШЛЕННЫЙ УНИВЕРСИТЕТ «СИНЕРГИЯ»»**
 :::
 
 ::: {custom-style="TitlePage"}
-ОТЧЕТ
+**Факультет:** [Информационных технологий]{custom-style="UnderlineValue"}
+:::
 
-по лабораторной работе № 1
-
-по дисциплине «Продвинутые технологии работы с большими данными»
-
-на тему: «Задача 3. Предобработка временных рядов»
+::: {custom-style="TitlePageSmall"}
+(наименование факультета / института)
 :::
 
 ::: {custom-style="TitlePage"}
-Обучающийся: Шатов Илья Андреевич
+**Направление подготовки:** [09.03.02 Информационные системы и технологии]{custom-style="UnderlineValue"}
+:::
 
-Группа: ВБИо-403-рсоб
-
-Преподаватель: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+::: {custom-style="TitlePageSmall"}
+(код и наименование направления подготовки / специальности)
 :::
 
 ::: {custom-style="TitlePage"}
-Москва 2026 г.
+**Форма обучения:** [очная]{custom-style="UnderlineValue"}
+:::
+
+::: {custom-style="TitlePageSmall"}
+(очная, очно-заочная, заочная)
+:::
+
+::: {custom-style="TitlePage"}
+&nbsp;
+:::
+
+::: {custom-style="TitlePage"}
+**ОТЧЕТ**
+
+**по лабораторной работе № 1**
+
+**по дисциплине** «Продвинутые технологии работы с большими данными»
+
+**на тему:** [«Задача 3. Предобработка временных рядов»]{custom-style="UnderlineValue"}
+:::
+
+::: {custom-style="TitlePage"}
+&nbsp;
+:::
+
+::: {custom-style="TitlePage"}
+**Обучающийся:** [Шатов Илья Андреевич]{custom-style="UnderlineValue"}
+:::
+
+::: {custom-style="TitlePageSmall"}
+(Фамилия Имя Отчество)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(подпись)
+:::
+
+::: {custom-style="TitlePage"}
+**Группа:** [ВБИо-403-рсоб]{custom-style="UnderlineValue"}
+:::
+
+::: {custom-style="TitlePage"}
+**Преподаватель:** [&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]{custom-style="UnderlineValue"}
+:::
+
+::: {custom-style="TitlePageSmall"}
+(Фамилия Имя Отчество)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(подпись)
+:::
+
+::: {custom-style="TitlePage"}
+&nbsp;
+:::
+
+::: {custom-style="TitlePage"}
+&nbsp;
+:::
+
+::: {custom-style="TitlePage"}
+**Москва 2026 г.**
 :::
 
 # Задача 3. Предобработка временных рядов {#задача3}
@@ -143,8 +187,12 @@ cat(sprintf("Календарных торговых дней: %d, из них �
 Три теста применены к лог-цене и к доходностям; результаты сведены в
 таблицу 1.
 
-::: {custom-style="TableCaptionLine"}
-Таблица 1. Результаты тестов стационарности
+::: {custom-style="Table Caption"}
+Таблица 1
+:::
+
+::: {custom-style="Table Title"}
+Результаты тестов стационарности.
 :::
 
 ```{r tests, collapse=TRUE}
@@ -223,8 +271,12 @@ Tesla с периодами роста и коррекций; сезонная �
 z-score) и три алгоритма машинного обучения (Isolation Forest, LOF,
 DBSCAN); количество обнаруженных аномалий по методам сведено в таблицу 2.
 
-::: {custom-style="TableCaptionLine"}
-Таблица 2. Число аномалий по методам
+::: {custom-style="Table Caption"}
+Таблица 2
+:::
+
+::: {custom-style="Table Title"}
+Число аномалий по методам.
 :::
 
 ```{r anomalies}

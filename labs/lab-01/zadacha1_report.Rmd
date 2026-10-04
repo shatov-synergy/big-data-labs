@@ -7,39 +7,83 @@ knit: (function(input, ...) { rmarkdown::render(input, output_dir = "output", ..
 ---
 
 ::: {custom-style="TitlePage"}
-НЕГОСУДАРСТВЕННОЕ ОБРАЗОВАТЕЛЬНОЕ ЧАСТНОЕ
+**НЕГОСУДАРСТВЕННОЕ ОБРАЗОВАТЕЛЬНОЕ ЧАСТНОЕ УЧРЕЖДЕНИЕ ВЫСШЕГО ОБРАЗОВАНИЯ**
 
-УЧРЕЖДЕНИЕ ВЫСШЕГО ОБРАЗОВАНИЯ
-
-«МОСКОВСКИЙ ФИНАНСОВО-ПРОМЫШЛЕННЫЙ УНИВЕРСИТЕТ «СИНЕРГИЯ»»
-
-Институт информационных технологий
-
-Направление подготовки: 09.03.02 Информационные системы и технологии
-
-Форма обучения: очная
+**«МОСКОВСКИЙ ФИНАНСОВО-ПРОМЫШЛЕННЫЙ УНИВЕРСИТЕТ «СИНЕРГИЯ»»**
 :::
 
 ::: {custom-style="TitlePage"}
-ОТЧЕТ
+**Факультет:** [Информационных технологий]{custom-style="UnderlineValue"}
+:::
 
-по лабораторной работе № 1
-
-по дисциплине «Продвинутые технологии работы с большими данными»
-
-на тему: «Задача 1. Разведочный анализ. Базовая визуализация данных»
+::: {custom-style="TitlePageSmall"}
+(наименование факультета / института)
 :::
 
 ::: {custom-style="TitlePage"}
-Обучающийся: Шатов Илья Андреевич
+**Направление подготовки:** [09.03.02 Информационные системы и технологии]{custom-style="UnderlineValue"}
+:::
 
-Группа: ВБИо-403-рсоб
-
-Преподаватель: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+::: {custom-style="TitlePageSmall"}
+(код и наименование направления подготовки / специальности)
 :::
 
 ::: {custom-style="TitlePage"}
-Москва 2026 г.
+**Форма обучения:** [очная]{custom-style="UnderlineValue"}
+:::
+
+::: {custom-style="TitlePageSmall"}
+(очная, очно-заочная, заочная)
+:::
+
+::: {custom-style="TitlePage"}
+&nbsp;
+:::
+
+::: {custom-style="TitlePage"}
+**ОТЧЕТ**
+
+**по лабораторной работе № 1**
+
+**по дисциплине** «Продвинутые технологии работы с большими данными»
+
+**на тему:** [«Задача 1. Разведочный анализ. Базовая визуализация данных»]{custom-style="UnderlineValue"}
+:::
+
+::: {custom-style="TitlePage"}
+&nbsp;
+:::
+
+::: {custom-style="TitlePage"}
+**Обучающийся:** [Шатов Илья Андреевич]{custom-style="UnderlineValue"}
+:::
+
+::: {custom-style="TitlePageSmall"}
+(Фамилия Имя Отчество)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(подпись)
+:::
+
+::: {custom-style="TitlePage"}
+**Группа:** [ВБИо-403-рсоб]{custom-style="UnderlineValue"}
+:::
+
+::: {custom-style="TitlePage"}
+**Преподаватель:** [&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]{custom-style="UnderlineValue"}
+:::
+
+::: {custom-style="TitlePageSmall"}
+(Фамилия Имя Отчество)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(подпись)
+:::
+
+::: {custom-style="TitlePage"}
+&nbsp;
+:::
+
+::: {custom-style="TitlePage"}
+&nbsp;
+:::
+
+::: {custom-style="TitlePage"}
+**Москва 2026 г.**
 :::
 
 # Задача 1. Разведочный анализ. Базовая визуализация данных {#задача1}

@@ -7,39 +7,83 @@ knit: (function(input, ...) { rmarkdown::render(input, output_dir = "output", ..
 ---
 
 ::: {custom-style="TitlePage"}
-НЕГОСУДАРСТВЕННОЕ ОБРАЗОВАТЕЛЬНОЕ ЧАСТНОЕ
+**НЕГОСУДАРСТВЕННОЕ ОБРАЗОВАТЕЛЬНОЕ ЧАСТНОЕ УЧРЕЖДЕНИЕ ВЫСШЕГО ОБРАЗОВАНИЯ**
 
-УЧРЕЖДЕНИЕ ВЫСШЕГО ОБРАЗОВАНИЯ
-
-«МОСКОВСКИЙ ФИНАНСОВО-ПРОМЫШЛЕННЫЙ УНИВЕРСИТЕТ «СИНЕРГИЯ»»
-
-Институт информационных технологий
-
-Направление подготовки: 09.03.02 Информационные системы и технологии
-
-Форма обучения: очная
+**«МОСКОВСКИЙ ФИНАНСОВО-ПРОМЫШЛЕННЫЙ УНИВЕРСИТЕТ «СИНЕРГИЯ»»**
 :::
 
 ::: {custom-style="TitlePage"}
-ОТЧЕТ
+**Факультет:** [Информационных технологий]{custom-style="UnderlineValue"}
+:::
 
-по лабораторной работе № 1
-
-по дисциплине «Продвинутые технологии работы с большими данными»
-
-на тему: «Задача 2. Разведочный анализ данных на основе датасета mtcars»
+::: {custom-style="TitlePageSmall"}
+(наименование факультета / института)
 :::
 
 ::: {custom-style="TitlePage"}
-Обучающийся: Шатов Илья Андреевич
+**Направление подготовки:** [09.03.02 Информационные системы и технологии]{custom-style="UnderlineValue"}
+:::
 
-Группа: ВБИо-403-рсоб
-
-Преподаватель: \_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+::: {custom-style="TitlePageSmall"}
+(код и наименование направления подготовки / специальности)
 :::
 
 ::: {custom-style="TitlePage"}
-Москва 2026 г.
+**Форма обучения:** [очная]{custom-style="UnderlineValue"}
+:::
+
+::: {custom-style="TitlePageSmall"}
+(очная, очно-заочная, заочная)
+:::
+
+::: {custom-style="TitlePage"}
+&nbsp;
+:::
+
+::: {custom-style="TitlePage"}
+**ОТЧЕТ**
+
+**по лабораторной работе № 1**
+
+**по дисциплине** «Продвинутые технологии работы с большими данными»
+
+**на тему:** [«Задача 2. Разведочный анализ данных на основе датасета mtcars»]{custom-style="UnderlineValue"}
+:::
+
+::: {custom-style="TitlePage"}
+&nbsp;
+:::
+
+::: {custom-style="TitlePage"}
+**Обучающийся:** [Шатов Илья Андреевич]{custom-style="UnderlineValue"}
+:::
+
+::: {custom-style="TitlePageSmall"}
+(Фамилия Имя Отчество)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(подпись)
+:::
+
+::: {custom-style="TitlePage"}
+**Группа:** [ВБИо-403-рсоб]{custom-style="UnderlineValue"}
+:::
+
+::: {custom-style="TitlePage"}
+**Преподаватель:** [&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]{custom-style="UnderlineValue"}
+:::
+
+::: {custom-style="TitlePageSmall"}
+(Фамилия Имя Отчество)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(подпись)
+:::
+
+::: {custom-style="TitlePage"}
+&nbsp;
+:::
+
+::: {custom-style="TitlePage"}
+&nbsp;
+:::
+
+::: {custom-style="TitlePage"}
+**Москва 2026 г.**
 :::
 
 # Задача 2. Разведочный анализ данных на основе датасета mtcars {#задача2}
@@ -77,8 +121,12 @@ data(mtcars)
 Функция выборочной моды реализована вручную: среди уникальных значений
 выбирается то, которое встречается чаще всего.
 
-::: {custom-style="TableCaptionLine"}
-Таблица 1. Описательные статистики переменных mtcars
+::: {custom-style="Table Caption"}
+Таблица 1
+:::
+
+::: {custom-style="Table Title"}
+Описательные статистики переменных mtcars.
 :::
 
 ```{r mode}
@@ -210,8 +258,12 @@ knitr::kable(out_rows)
 Групповые статистики, рассчитанные цепочкой `group_by()` +
 `summarise()`, приведены в таблице 2.
 
-::: {custom-style="TableCaptionLine"}
-Таблица 2. Групповые статистики mpg по числу цилиндров
+::: {custom-style="Table Caption"}
+Таблица 2
+:::
+
+::: {custom-style="Table Title"}
+Групповые статистики mpg по числу цилиндров.
 :::
 
 ```{r group}
