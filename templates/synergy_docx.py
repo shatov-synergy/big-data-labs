@@ -101,6 +101,75 @@ def _set_doc_defaults(doc, font_name=TNR, size_pt=14):
         el.set(qn("w:val"), val)
 
 
+# стили кода/подсветки синтаксиса (pandoc) — моноширинные
+MONO_STYLES = {"Source Code", "R Output", "Verbatim Char", "SourceCode",
+               "VerbatimChar"}
+# любые символьные стили подсветки pandoc (*Tok) — тоже моноширинные
+
+
+def _is_mono_style(name):
+    return name in MONO_STYLES or name.endswith("Tok")
+
+
+def sanitize_fonts(doc):
+    """Гарантия «никакого Calibri» во всём документе:
+
+    1) каждому абзацному/символьному стилю прописывает явный шрифт
+       (Times New Roman; стили кода и подсветки — Courier New)
+       и удаляет theme-атрибуты (asciiTheme и пр., ссылающиеся на тему
+       со шрифтами Calibri/Cambria);
+    2) docDefaults → Times New Roman 14;
+    3) в theme1.xml.majorFont/minorFont задаёт Times New Roman
+       (страховка для любых оставшихся ссылок на тему).
+    """
+    _set_doc_defaults(doc, TNR, 14)
+
+    # прямой обход всех w:style в styles.xml (надёжнее итератора python-docx,
+    # который пропускает стили без имени)
+    n = 0
+    for st_el in doc.styles.element.findall(qn("w:style")):
+        stype = st_el.get(qn("w:type"))
+        if stype not in ("paragraph", "character"):
+            continue
+        name_el = st_el.find(qn("w:name"))
+        name = name_el.get(qn("w:val")) if name_el is not None else ""
+        sid = st_el.get(qn("w:styleId")) or ""
+        font = MONO if (name in MONO_STYLES or sid in MONO_STYLES
+                        or name.endswith("Tok") or sid.endswith("Tok")) else TNR
+        rpr = st_el.find(qn("w:rPr"))
+        if rpr is None:
+            rpr = OxmlElement("w:rPr")
+            st_el.append(rpr)
+        r_fonts = rpr.find(qn("w:rFonts"))
+        if r_fonts is None:
+            r_fonts = OxmlElement("w:rFonts")
+            rpr.insert(0, r_fonts)
+        for attr in ("w:asciiTheme", "w:hAnsiTheme", "w:cstheme",
+                     "w:eastAsiaTheme"):
+            if r_fonts.get(qn(attr)) is not None:
+                del r_fonts.attrib[qn(attr)]
+        for attr in ("w:ascii", "w:hAnsi", "w:cs", "w:eastAsia"):
+            r_fonts.set(qn(attr), font)
+        n += 1
+
+    # тема документа: major/minor → Times New Roman
+    try:
+        import re as _re
+        for part in doc.part.package.iter_parts():
+            if str(part.partname) == "/word/theme/theme1.xml":
+                xml = part.blob.decode("utf-8")
+                xml = _re.sub(r'(<a:majorFont>\s*<a:latin[^>]*typeface=")[^"]*(")',
+                              r"\g<1>Times New Roman\g<2>", xml)
+                xml = _re.sub(r'(<a:minorFont>\s*<a:latin[^>]*typeface=")[^"]*(")',
+                              r"\g<1>Times New Roman\g<2>", xml)
+                part._blob = xml.encode("utf-8")
+                break
+    except Exception:
+        pass
+
+    return n
+
+
 def _get_or_add_style(doc, name, style_type=WD_STYLE_TYPE.PARAGRAPH, base="Normal"):
     try:
         return doc.styles[name]

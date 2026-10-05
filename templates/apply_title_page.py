@@ -254,6 +254,22 @@ def add_page_numbers(doc):
         r._r.getparent().remove(r._r)
 
 
+def enforce_alignment(doc):
+    """Прямое форматирование абзацев основного текста (по ширине,
+    красная строка 1,25, полуторный интервал) — независимо от разрешения
+    стилей в разных офисных пакетах."""
+    n = 0
+    for p in doc.paragraphs:
+        sid = p.style.style_id if p.style is not None else ""
+        if sid in ("BodyText", "FirstParagraph") and p.text.strip():
+            pf = p.paragraph_format
+            pf.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+            pf.first_line_indent = Cm(1.25)
+            pf.line_spacing = 1.5
+            n += 1
+    return n
+
+
 # ------------------------------------------------------------------
 
 def main():
@@ -289,6 +305,8 @@ def main():
 
     n_img = center_images(doc)
     add_page_numbers(doc)
+    n_san = sd.sanitize_fonts(doc)
+    n_al = enforce_alignment(doc)
 
     if args.toc:
         # СОДЕРЖАНИЕ вставляется ПЕРЕД первым элементом тела
@@ -306,6 +324,8 @@ def main():
 
     doc.save(args.docx)
     print("OK:", args.docx, "| картинок отцентрировано:", n_img,
+          "| стилей санитизировано:", n_san,
+          "| абзацев выровнено:", n_al,
           "| СОДЕРЖАНИЕ:", "да" if args.toc else "нет")
 
 
