@@ -81,6 +81,13 @@ docker/               скрипты сборки образа
 - Имена файлов сдачи — строго `Laboratornyiy praktikum N_Задача M_отчет.{docx,pdf}`.
 - PDF получается только конвертацией итогового docx (LibreOffice в контейнере).
 
+## Общий набор synergy-agent
+
+Если рядом есть каталог `../synergy-agent`, финальные pptx и docx перед
+сдачей прогонять через `../synergy-agent/scripts/sanitize_ooxml.py` и
+`../synergy-agent/scripts/validate_office.py`. Шаблон Синергии не отдавать
+как файл сдачи. Файл, пересохранённый в OnlyOffice, не сдавать.
+
 ## Скиллы проекта (`.agents/skills/`)
 
 | Скилл | Когда применять |
