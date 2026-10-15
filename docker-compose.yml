@@ -5,6 +5,8 @@ services:
     environment:
       USER: ${RSTUDIO_USER:-rstudio}
       PASSWORD: ${RSTUDIO_PASSWORD:-bigdata}
+      # RStudio 2026.09 не стартует сессию без этого каталога в окружении.
+      R_DOC_DIR: /usr/local/lib/R/doc
     ports:
       - "127.0.0.1:8787:8787"
     volumes:

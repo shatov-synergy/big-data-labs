@@ -1,0 +1,355 @@
+---
+output:
+  word_document:
+    reference_docx: reference.docx
+knit: (function(input, ...) { rmarkdown::render(input, output_dir = "output", ...) })
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
+                      fig.width = 7.2, fig.height = 5,
+                      cache = TRUE)
+```
+
+# ВВЕДЕНИЕ
+
+**Условие.** Провести кластерный анализ набора данных Wine и сравнить
+эффективность трёх алгоритмов: K-means, PAM и CLARA. Нужно подготовить
+признаки и истинные классы, стандартизировать данные, выбрать число
+кластеров методом силуэта и статистикой разрыва, выполнить кластеризацию
+при k = 3, показать кластеры в пространстве двух главных компонент,
+построить графики силуэтов и сравнить разбиения с истинными классами
+по скорректированному индексу Рэнда (ARI).
+
+**Цель работы** — определить, какой из трёх алгоритмов лучше восстанавливает
+известные типы вин, и обосновать выбор по графикам и по ARI.
+
+# 1 Подготовка данных Wine
+
+Набор содержит результаты химического анализа вин трёх типов. Первый
+столбец — истинный класс (`Type`), остальные 13 столбцов — признаки
+(спирт, яблочная кислота, зола, щёлочность золы, магний, фенолы,
+флавоноиды, нефлавоноидные фенолы, проантоцианины, интенсивность цвета,
+оттенок, оптическая плотность разбавленного вина, пролин). Признаки
+измерены в разных шкалах, поэтому перед кластеризацией их стандартизируют.
+
+```{r packages}
+pkgs <- c("tidyverse", "cluster", "factoextra", "patchwork", "RColorBrewer",
+          "mclust", "caret", "rattle")
+new <- pkgs[!pkgs %in% installed.packages()[, "Package"]]
+if (length(new) > 0) install.packages(new)
+
+library(tidyverse)
+library(cluster)
+library(factoextra)
+library(patchwork)
+library(RColorBrewer)
+library(mclust)
+library(caret)
+library(rattle)
+library(dplyr)
+```
+
+```{r load-wine}
+items <- tryCatch(
+  data(package = "rattle")$results[, "Item"],
+  error = function(e) character()
+)
+if ("wine" %in% items) {
+  data("wine", package = "rattle")
+} else {
+  cache_file <- if (file.exists("../../data/wine.csv")) {
+    "../../data/wine.csv"
+  } else {
+    "data/wine.csv"
+  }
+  if (!file.exists(cache_file)) {
+    stop("В пакете rattle нет набора wine и кэш data/wine.csv не найден")
+  }
+  wine <- read.csv(cache_file)
+  wine$Type <- factor(wine$Type)
+}
+head(wine)
+str(wine)
+```
+
+```{r prepare}
+df <- wine[, -1]
+df_scaled <- scale(df)
+true_class <- wine$Type
+n_na <- sum(is.na(df))
+n_na
+table(true_class)
+```
+
+Пропусков в матрице признаков — `r n_na`. Всего `r nrow(wine)` вин и
+`r ncol(df)` признаков. Истинных классов — `r length(unique(true_class))`,
+их частоты: `r paste(names(table(true_class)), as.integer(table(true_class)), sep = " — ", collapse = "; ")`.
+
+**Вывод.** Данные полные и пригодны для кластеризации. Класс `Type` отделён
+от признаков и используется только как внешний критерий (ARI), а не как
+вход алгоритма. Стандартизация `scale()` выравнивает вклад пролина и
+магния с вкладом оттенка и фенолов.
+
+# 2 Выбор числа кластеров
+
+Число кластеров оценивается двумя способами при одном зерне датчика
+случайных чисел. По условию практикума само разбиение выполняется при
+k = 3 — по числу известных типов вина.
+
+```{r choose-k}
+k <- 3
+pal <- brewer.pal(8, "Set2")
+
+set.seed(123)
+p_sil <- fviz_nbclust(df_scaled, kmeans, method = "silhouette")
+gap_stat <- clusGap(df_scaled, FUN = kmeans, nstart = 25,
+                    K.max = 8, B = 50)
+p_gap <- fviz_gap_stat(gap_stat)
+
+sil_df <- as.data.frame(p_sil$data)
+k_sil <- as.integer(as.character(sil_df$clusters[which.max(sil_df$y)]))
+k_gap <- as.integer(maxSE(gap_stat$Tab[, "gap"], gap_stat$Tab[, "SE.sim"]))
+k_sil
+k_gap
+```
+
+Метод силуэта показан на рисунке 1, статистика разрыва — на рисунке 2.
+
+```{r fig-sil, echo=FALSE, fig.cap="Рисунок 1 — Выбор числа кластеров методом силуэта"}
+p_sil
+```
+
+```{r fig-gap, echo=FALSE, fig.cap="Рисунок 2 — Статистика разрыва (Gap Statistic)"}
+p_gap
+```
+
+**Интерпретация.** Максимум среднего силуэта достигается при k =
+`r k_sil`. Статистика разрыва (правило firstSEmax, им же пользуется
+`fviz_gap_stat`) указывает на k = `r k_gap`. Оба ориентира сопоставляются
+с известным числом типов вина.
+
+**Вывод.** Для сравнения с истинными классами далее фиксируется k = 3,
+как требует задание. Если оценка по силуэту или по gap отличается от 3,
+это означает, что внутренняя геометрия данных не обязана совпасть с
+числом сортов, и качество при k = 3 нужно проверять отдельно — по
+силуэтам разбиения и по ARI.
+
+# 3 Кластеризация и сравнение алгоритмов
+
+## 3.1 K-means, PAM и CLARA
+
+K-means ищет сферические кластеры вокруг средних. PAM (partitioning
+around medoids) опирается на реальные объекты-медоиды и устойчивее к
+выбросам. CLARA строит PAM на подвыборках и предназначена для больших
+наборов; здесь она применяется к тем же 178 винам, чтобы сравнить
+алгоритмы на равных условиях.
+
+```{r cluster}
+set.seed(123)
+km <- kmeans(df_scaled, centers = k, nstart = 25)
+pam_fit <- pam(df_scaled, k = k)
+clara_fit <- clara(df_scaled, k = k)
+
+table(Kmeans = km$cluster)
+table(PAM = pam_fit$clustering)
+table(CLARA = clara_fit$clustering)
+```
+
+Размеры кластеров K-means: `r paste(as.integer(table(km$cluster)), collapse = ", ")`.
+PAM: `r paste(as.integer(table(pam_fit$clustering)), collapse = ", ")`.
+CLARA: `r paste(as.integer(table(clara_fit$clustering)), collapse = ", ")`.
+Частоты истинных классов — `r paste(as.integer(table(true_class)), collapse = ", ")`.
+
+## 3.2 Проекция на главные компоненты
+
+```{r pca-fit}
+pca <- prcomp(df_scaled)
+pca_df <- as.data.frame(pca$x[, 1:2])
+pca_imp <- summary(pca)$importance
+
+plot_pca <- function(clusters, title) {
+  pca_df$cluster <- factor(clusters)
+  ggplot(pca_df, aes(PC1, PC2, color = cluster)) +
+    geom_point(size = 2, alpha = 0.8) +
+    scale_color_manual(values = pal) +
+    theme_minimal() +
+    labs(title = title)
+}
+```
+
+Первые две компоненты объясняют
+`r round(100 * pca_imp[2, 1], 1)` % и
+`r round(100 * pca_imp[2, 2], 1)` % дисперсии
+(вместе `r round(100 * (pca_imp[2, 1] + pca_imp[2, 2]), 1)` %).
+Это проекция для просмотра, а не само пространство кластеризации:
+алгоритмы работали по всем `r ncol(df)` стандартизированным признакам.
+Расположение кластеров показано на рисунках 3–5.
+
+```{r fig-pca-km, fig.cap="Рисунок 3 — Кластеры K-means в пространстве двух главных компонент"}
+plot_pca(km$cluster, "PCA + K-means")
+```
+
+```{r fig-pca-pam, fig.cap="Рисунок 4 — Кластеры PAM в пространстве двух главных компонент"}
+plot_pca(pam_fit$clustering, "PCA + PAM")
+```
+
+```{r fig-pca-clara, fig.cap="Рисунок 5 — Кластеры CLARA в пространстве двух главных компонент"}
+plot_pca(clara_fit$clustering, "PCA + CLARA")
+```
+
+**Вывод.** На рисунках 3–5 три группы вин разделяются вдоль PC1, но
+границы не пустые: часть объектов лежит между облаками. Картины K-means,
+PAM и CLARA близки, значит различия алгоритмов на этих данных невелики
+и их нужно подтверждать числами, а не только проекцией.
+
+## 3.3 Графики силуэтов
+
+Средняя ширина силуэта показывает, насколько объект ближе к своему
+кластеру, чем к соседнему. Графики — на рисунках 6–8.
+
+```{r sil-values}
+sil_width <- function(clusters) {
+  mean(silhouette(clusters, dist(df_scaled))[, "sil_width"])
+}
+sil_km <- sil_width(km$cluster)
+sil_pam <- sil_width(pam_fit$clustering)
+sil_clara <- sil_width(clara_fit$clustering)
+c(Kmeans = sil_km, PAM = sil_pam, CLARA = sil_clara)
+```
+
+```{r fig-sil-km, fig.cap="Рисунок 6 — Силуэты кластеров K-means"}
+fviz_silhouette(silhouette(km$cluster, dist(df_scaled))) +
+  ggtitle("Silhouette: K-means")
+```
+
+```{r fig-sil-pam, fig.cap="Рисунок 7 — Силуэты кластеров PAM"}
+fviz_silhouette(silhouette(pam_fit$clustering, dist(df_scaled))) +
+  ggtitle("Silhouette: PAM")
+```
+
+```{r fig-sil-clara, fig.cap="Рисунок 8 — Силуэты кластеров CLARA"}
+fviz_silhouette(silhouette(clara_fit$clustering, dist(df_scaled))) +
+  ggtitle("Silhouette: CLARA")
+```
+
+**Интерпретация.** Средний силуэт K-means равен `r round(sil_km, 3)`,
+PAM — `r round(sil_pam, 3)`, CLARA — `r round(sil_clara, 3)`.
+Положительное среднее означает, что типичный объект отнесён к более
+близкому кластеру; отдельные отрицательные полосы на рисунках 6–8 —
+объекты на границе групп.
+
+**Вывод.** Внутреннее качество трёх разбиений сопоставимо. Средний силуэт
+равен `r round(sil_km, 3)` у K-means, `r round(sil_pam, 3)` у PAM и
+`r round(sil_clara, 3)` у CLARA; лидер —
+`r names(which.max(c("K-means" = sil_km, PAM = sil_pam, CLARA = sil_clara)))`.
+После стандартизации группы ближе к сферическим и сопоставимы по размеру
+(K-means: `r paste(as.integer(table(km$cluster)), collapse = ", ")`;
+PAM: `r paste(as.integer(table(pam_fit$clustering)), collapse = ", ")`;
+CLARA: `r paste(as.integer(table(clara_fit$clustering)), collapse = ", ")`),
+поэтому отрыв лидера по силуэту небольшой. Отрицательные полосы на
+рисунках 6–8 остаются у вин на границе сортов.
+
+## 3.4 Сравнение с истинными классами
+
+ARI равен 1 при полном совпадении разбиений с точностью до перестановки
+меток и близок к 0, если совпадение не лучше случайного.
+
+::: {custom-style="Table Caption"}
+Таблица 1 — Качество кластеризации: ARI и средний силуэт
+:::
+
+```{r ari-table}
+ari_km <- adjustedRandIndex(km$cluster, true_class)
+ari_pam <- adjustedRandIndex(pam_fit$clustering, true_class)
+ari_clara <- adjustedRandIndex(clara_fit$clustering, true_class)
+
+ari_tbl <- data.frame(
+  Алгоритм = c("K-means", "PAM", "CLARA"),
+  ARI = c(ari_km, ari_pam, ari_clara),
+  `Средний силуэт` = c(sil_km, sil_pam, sil_clara),
+  check.names = FALSE
+)
+knitr::kable(ari_tbl, digits = 3)
+
+cat("K-means и истинные классы:\n")
+print(table(Истинный = true_class, Кластер = km$cluster))
+cat("PAM и истинные классы:\n")
+print(table(Истинный = true_class, Кластер = pam_fit$clustering))
+cat("CLARA и истинные классы:\n")
+print(table(Истинный = true_class, Кластер = clara_fit$clustering))
+
+ari_vec <- c(`K-means` = ari_km, PAM = ari_pam, CLARA = ari_clara)
+sil_vec <- c(`K-means` = sil_km, PAM = sil_pam, CLARA = sil_clara)
+best_ari_name <- names(which.max(ari_vec))
+best_sil_name <- names(which.max(sil_vec))
+best_ari <- max(ari_vec)
+best_sil <- max(sil_vec)
+
+hits_of <- function(clusters, truth) {
+  as.integer(sum(apply(table(truth, clusters), 1, max)))
+}
+hits_km <- hits_of(km$cluster, true_class)
+hits_pam <- hits_of(pam_fit$clustering, true_class)
+hits_clara <- hits_of(clara_fit$clustering, true_class)
+km_sizes_txt <- paste(as.integer(table(km$cluster)), collapse = ", ")
+pam_sizes_txt <- paste(as.integer(table(pam_fit$clustering)), collapse = ", ")
+clara_sizes_txt <- paste(as.integer(table(clara_fit$clustering)), collapse = ", ")
+true_sizes_txt <- paste(as.integer(table(true_class)), collapse = ", ")
+```
+
+**Интерпретация.** По таблице 1 наибольший ARI у `r best_ari_name`
+(`r round(best_ari, 3)`), наибольший средний силуэт у `r best_sil_name`
+(`r round(best_sil, 3)`).
+`r if (best_ari_name == best_sil_name) paste0("Оба критерия выделяют один и тот же алгоритм — ", best_ari_name, ".") else paste0("Критерии расходятся: с истинными типами вина лучше согласован ", best_ari_name, ", а более компактные кластеры по силуэту даёт ", best_sil_name, ".")`
+Таблицы сопряжённости показывают, что каждый истинный класс в основном
+попадает в свой кластер, а ошибки сосредоточены на границе двух соседних
+типов.
+
+**Вывод.** Для этой задачи внешний критерий важнее: типы вин известны,
+и цель — восстановить их. Лучший метод — `r best_ari_name`
+(ARI = `r round(best_ari, 3)`). По таблице 1 ARI равен
+`r round(ari_km, 3)` у K-means, `r round(ari_pam, 3)` у PAM и
+`r round(ari_clara, 3)` у CLARA; средние силуэты —
+`r round(sil_km, 3)`, `r round(sil_pam, 3)` и `r round(sil_clara, 3)`.
+По максимуму строки таблицы сопряжённости K-means совпадает с сортом у
+`r hits_km` из `r nrow(wine)` вин, PAM — у `r hits_pam`, CLARA — у
+`r hits_clara`. После стандартизации кластеры ближе к сферическим и
+сопоставимы по размеру: K-means даёт группы `r km_sizes_txt` при истинных
+частотах `r true_sizes_txt`, а PAM (`r pam_sizes_txt`) и CLARA
+(`r clara_sizes_txt`) сильнее укрупняют один кластер. В такой геометрии
+среднее K-means согласуется с сортами лучше медоидов. PAM устойчивее к
+выбросам, но здесь это не улучшило согласие с типами вина: разница ARI
+(K-means минус PAM) равна `r round(ari_km - ari_pam, 3)`. CLARA повторяет
+PAM на подвыборках и рассчитана на большие наборы; при n = `r nrow(wine)`
+подвыборка не даёт выигрыша над K-means (ARI CLARA минус PAM —
+`r round(ari_clara - ari_pam, 3)`, K-means минус CLARA —
+`r round(ari_km - ari_clara, 3)`).
+
+# ВЫВОДЫ
+
+На `r nrow(wine)` образцах вина (`r ncol(df)` стандартизированных
+признаков, пропусков — `r n_na`) сравнены K-means, PAM и CLARA при
+k = 3. Метод силуэта дал оптимальное k = `r k_sil`, статистика разрыва —
+k = `r k_gap`. В проекции PCA (рисунки 3–5) первые две компоненты
+удерживают `r round(100 * (pca_imp[2, 1] + pca_imp[2, 2]), 1)` %
+дисперсии и показывают три пересекающихся облака.
+
+По таблице 1 и рисункам 3–8 лучший алгоритм — `r best_ari_name`.
+ARI составляет `r round(ari_km, 3)` (K-means), `r round(ari_pam, 3)` (PAM)
+и `r round(ari_clara, 3)` (CLARA); средние силуэты —
+`r round(sil_km, 3)`, `r round(sil_pam, 3)` и `r round(sil_clara, 3)`.
+`r if (best_ari_name == best_sil_name) paste0("Оба критерия выделяют один и тот же метод — ", best_ari_name, ".") else paste0("С истинными типами вина лучше согласован ", best_ari_name, ", а по силуэту лидирует ", best_sil_name, ".")`
+Совпадение с сортом по таблице сопряжённости: `r hits_km`, `r hits_pam` и
+`r hits_clara` вин из `r nrow(wine)`. После `scale()` признаки соизмеримы,
+кластеры близки к сферическим и по размеру умеренно ровные
+(`r km_sizes_txt` у K-means против `r pam_sizes_txt` у PAM и
+`r clara_sizes_txt` у CLARA; истинные частоты — `r true_sizes_txt`),
+поэтому центроидный алгоритм совпадает с тремя сортами лучше. PAM
+устойчивее к выбросам, но на Wine это не дало большего согласия с классами
+(разница ARI, K-means минус PAM — `r round(ari_km - ari_pam, 3)`).
+CLARA предназначена для больших выборок: при n = `r nrow(wine)` разница
+ARI (CLARA минус PAM) равна `r round(ari_clara - ari_pam, 3)`, а
+(K-means минус CLARA) — `r round(ari_km - ari_clara, 3)`. Ни один алгоритм не достигает ARI = 1: химические профили
+соседних типов перекрываются, что видно и по отрицательным силуэтам
+отдельных вин на рисунках 6–8.

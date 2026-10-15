@@ -23,7 +23,10 @@ for (m in mirrors) {
 
 pkgs <- c("plotly", "quantmod", "forecast", "tseries", "moments",
           "lmtest", "rugarch", "isotree", "dbscan", "lazyeval",
-          "zoo", "FinTS", "outliers", "htmlwidgets", "broom")
+          "zoo", "FinTS", "outliers", "htmlwidgets", "broom",
+          # Лабораторный практикум 2: кластеризация Wine и регрессия Boston
+          "tidyverse", "factoextra", "patchwork", "caret", "rattle",
+          "mlbench", "randomForest", "gbm", "e1071")
 
 install.packages(pkgs, Ncpus = 2)
 

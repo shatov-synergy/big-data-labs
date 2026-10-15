@@ -1,0 +1,543 @@
+---
+output:
+  word_document:
+    reference_docx: reference.docx
+knit: (function(input, ...) { rmarkdown::render(input, output_dir = "output", ...) })
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
+                      fig.width = 7.2, fig.height = 5,
+                      cache = TRUE)
+```
+
+# ВВЕДЕНИЕ
+
+**Условие.** По набору BostonHousing построить модели прогноза медианной
+стоимости жилья `medv` (тыс. долл.) по характеристикам района. Нужно
+изучить структуру, пропуски, распределение цели и корреляции, разделить
+данные на обучающую (80 %) и тестовую (20 %) выборки, обучить линейную
+регрессию, k ближайших соседей, случайный лес и градиентный бустинг,
+сравнить их повторной 10-кратной кросс-валидацией (3 повтора) по RMSE,
+R² и MAE, выбрать модель с наименьшим RMSE, проверить её на тесте,
+разобрать остатки и сравнить важность признаков у леса и бустинга.
+
+**Цель работы** — выбрать модель с наименьшей ошибкой прогноза и назвать
+характеристики жилья, которые сильнее всего связаны со стоимостью.
+
+# 1 Подготовка и разведочный анализ
+
+## 1.1 Структура данных и пропуски
+
+Целевая переменная — `medv`. Предикторы: уровень преступности (`crim`),
+доля участков большой площади (`zn`), доля неторговой застройки (`indus`),
+граница с рекой Чарльз (`chas`), концентрация оксидов азота (`nox`),
+среднее число комнат (`rm`), доля старого жилья (`age`), удалённость от
+центров занятости (`dis`), доступность радиальных шоссе (`rad`), ставка
+налога (`tax`), число учеников на учителя (`ptratio`), преобразованная
+доля темнокожего населения (`b`) и доля населения с низким статусом
+(`lstat`).
+
+```{r packages}
+pkgs <- c("caret", "mlbench", "randomForest", "gbm", "e1071", "ggplot2")
+new <- pkgs[!pkgs %in% installed.packages()[, "Package"]]
+if (length(new) > 0) install.packages(new)
+
+library(caret)
+library(mlbench)
+library(gbm)
+library(e1071)
+library(ggplot2)
+```
+
+```{r load-boston}
+loaded <- tryCatch({
+  data("BostonHousing", package = "mlbench")
+  exists("BostonHousing") && is.data.frame(BostonHousing) &&
+    nrow(BostonHousing) > 0 && "medv" %in% names(BostonHousing)
+}, error = function(e) FALSE)
+
+if (isTRUE(loaded)) {
+  df <- BostonHousing
+} else {
+  cache_file <- if (file.exists("../../data/boston.csv")) {
+    "../../data/boston.csv"
+  } else {
+    "data/boston.csv"
+  }
+  if (!file.exists(cache_file)) {
+    stop("Набор BostonHousing недоступен и кэш data/boston.csv не найден")
+  }
+  df <- read.csv(cache_file)
+  df$chas <- factor(df$chas)
+}
+str(df)
+```
+
+```{r na-check}
+n_na <- sum(is.na(df))
+n_na
+summary(df)
+```
+
+В наборе `r nrow(df)` наблюдений и `r ncol(df) - 1` предикторов.
+Пропущенных значений — `r n_na`. Признак `chas` — фактор, поэтому в
+корреляционную матрицу Пирсона он не входит.
+
+**Вывод.** Матрица полная, дополнительная импутация не требуется.
+Модели можно обучать на исходных столбцах формулой `medv ~ .`.
+
+## 1.2 Описательные статистики
+
+::: {custom-style="Table Caption"}
+Таблица 1 — Описательные статистики количественных переменных BostonHousing
+:::
+
+```{r desc-table}
+num <- df[, sapply(df, is.numeric)]
+desc_tbl <- data.frame(
+  Переменная = names(num),
+  Среднее = round(sapply(num, mean), 2),
+  Медиана = round(sapply(num, median), 2),
+  SD = round(sapply(num, sd), 2),
+  Минимум = round(sapply(num, min), 2),
+  Максимум = round(sapply(num, max), 2),
+  check.names = FALSE,
+  row.names = NULL
+)
+knitr::kable(desc_tbl, digits = 2)
+```
+
+По таблице 1 среднее `medv` равно `r round(mean(df$medv), 2)` тыс. долл.,
+медиана — `r median(df$medv)`, стандартное отклонение —
+`r round(sd(df$medv), 2)`.
+`r if (mean(df$medv) > median(df$medv)) "Среднее выше медианы: распределение стоимости имеет правый хвост." else "Среднее не превышает медиану."`
+Доля районов у реки (`chas` = 1) —
+`r round(100 * mean(as.numeric(as.character(df$chas))), 1)` %.
+
+**Вывод.** Типичный район стоит около `r median(df$medv)` тыс. долл.,
+но есть заметно более дорогие наблюдения вплоть до
+`r max(df$medv)` тыс. долл. Разброс признаков (налог, доля старого жилья,
+преступность) велик, поэтому перед k-NN нужна стандартизация; лес и
+бустинг к масштабу нечувствительны.
+
+## 1.3 Распределение целевой переменной
+
+Гистограмма `medv` приведена на рисунке 1.
+
+```{r fig-hist, fig.cap="Рисунок 1 — Распределение медианной стоимости жилья"}
+hist(df$medv,
+     breaks = 30,
+     col = "steelblue",
+     main = "Распределение медианной стоимости жилья",
+     xlab = "medv (тыс. долл.)")
+```
+
+**Вывод.** На рисунке 1 основная масса районов лежит в интервале примерно
+от 15 до 25 тыс. долл. Правый хвост и локальный пик у верхней границы
+шкалы (`r max(df$medv)`) показывают, что часть дорогих домов цензурирована
+или собрана в одну точку. Линейная модель может систематически ошибаться
+на этом хвосте; древесные ансамбли способны повторить нелинейность.
+
+## 1.4 Корреляции признаков со стоимостью
+
+::: {custom-style="Table Caption"}
+Таблица 2 — Корреляция Пирсона количественных признаков с medv
+:::
+
+```{r corr}
+cor_matrix <- cor(df[, sapply(df, is.numeric)])
+cor_medv <- round(cor_matrix[, "medv"], 2)
+cor_medv
+
+cor_pred <- cor_medv[names(cor_medv) != "medv"]
+cor_tbl <- data.frame(
+  Признак = names(cor_pred),
+  Корреляция = as.numeric(cor_pred),
+  row.names = NULL
+)
+cor_tbl <- cor_tbl[order(cor_tbl$Корреляция), ]
+knitr::kable(cor_tbl, digits = 2)
+
+pos_name <- cor_tbl$Признак[which.max(cor_tbl$Корреляция)]
+neg_name <- cor_tbl$Признак[which.min(cor_tbl$Корреляция)]
+pos_r <- max(cor_tbl$Корреляция)
+neg_r <- min(cor_tbl$Корреляция)
+```
+
+**Интерпретация.** Самая сильная положительная связь со стоимостью — у
+`r pos_name` (r = `r pos_r`), самая сильная отрицательная — у
+`r neg_name` (r = `r neg_r`). Остальные коэффициенты таблицы 2 слабее
+по модулю. Корреляция описывает только линейную парную связь и не
+заменяет модель: признаки ещё и связаны между собой (налог и доступность
+шоссе, возраст жилья и удалённость).
+
+**Вывод.** Для линейной регрессии главные кандидаты — `r pos_name` и
+`r neg_name`. Ансамблевые модели могут использовать и более слабые
+нелинейные зависимости, поэтому окончательный список влияющих признаков
+берётся из важности переменных, а не только из таблицы 2.
+
+# 2 Обучение моделей
+
+Выборка делится стратифицированно по квантилям `medv` (функция
+`createDataPartition`, 80 %). Качество на обучении оценивается повторной
+кросс-валидацией: 10 блоков, 3 повтора, итого 30 разбиений. Линейная
+регрессия — база без настройки. Для k-NN перебираются 10 значений k на
+стандартизированных признаках. Для случайного леса и GBM сетка
+`tuneLength = 5`.
+
+```{r train-models}
+set.seed(123)
+idx <- createDataPartition(df$medv, p = 0.8, list = FALSE)
+idx <- as.integer(idx)
+train_set <- df[idx, ]
+test_set <- df[-idx, ]
+
+ctrl <- trainControl(
+  method = "repeatedcv",
+  number = 10,
+  repeats = 3,
+  savePredictions = "final"
+)
+
+models_list <- list()
+
+models_list$lm <- train(
+  medv ~ .,
+  data = train_set,
+  method = "lm",
+  trControl = ctrl
+)
+
+models_list$knn <- train(
+  medv ~ .,
+  data = train_set,
+  method = "knn",
+  preProcess = c("center", "scale"),
+  trControl = ctrl,
+  tuneLength = 10
+)
+
+models_list$rf <- train(
+  medv ~ .,
+  data = train_set,
+  method = "rf",
+  trControl = ctrl,
+  tuneLength = 5
+)
+
+models_list$gbm <- train(
+  medv ~ .,
+  data = train_set,
+  method = "gbm",
+  trControl = ctrl,
+  tuneLength = 5,
+  verbose = FALSE
+)
+
+resamples_result <- resamples(models_list)
+resample_summary <- summary(resamples_result)
+print(resample_summary)
+
+rmse_values <- sapply(models_list, function(m) min(m$results$RMSE))
+best_model_name <- names(which.min(rmse_values))
+best_model <- models_list[[best_model_name]]
+cat("Лучшая модель:", best_model_name, "\n")
+print(round(rmse_values, 4))
+print(best_model$bestTune)
+```
+
+В обучении `r nrow(train_set)` наблюдений, в тесте — `r nrow(test_set)`
+(доля теста `r round(100 * nrow(test_set) / nrow(df), 1)` %).
+
+# 3 Сравнение качества по кросс-валидации
+
+::: {custom-style="Table Caption"}
+Таблица 3 — Средние метрики повторной кросс-валидации
+:::
+
+```{r cv-table}
+model_labels <- c(
+  lm = "Линейная регрессия",
+  knn = "k ближайших соседей",
+  rf = "Случайный лес",
+  gbm = "Градиентный бустинг"
+)
+cv_stats <- resample_summary$statistics
+mean_of <- function(mat) {
+  col <- if ("Mean" %in% colnames(mat)) "Mean" else colnames(mat)[1]
+  mat[, col]
+}
+cv_tbl <- data.frame(
+  Модель = unname(model_labels[rownames(cv_stats$RMSE)]),
+  RMSE = round(mean_of(cv_stats$RMSE), 3),
+  R2 = round(mean_of(cv_stats$Rsquared), 3),
+  MAE = round(mean_of(cv_stats$MAE), 3),
+  check.names = FALSE,
+  row.names = NULL
+)
+knitr::kable(cv_tbl, digits = 3)
+
+best_label <- unname(model_labels[best_model_name])
+best_row <- which.min(cv_tbl$RMSE)
+cv_rmse <- mean_of(cv_stats$RMSE)
+cv_r2 <- mean_of(cv_stats$Rsquared)
+cv_mae <- mean_of(cv_stats$MAE)
+```
+
+Распределения RMSE и R² по 30 разбиениям показаны на рисунках 2–4.
+
+```{r fig-rmse-box, fig.cap="Рисунок 2 — Сравнение моделей по RMSE (кросс-валидация)"}
+bwplot(resamples_result, metric = "RMSE",
+       main = "Сравнение моделей по RMSE")
+```
+
+```{r fig-rsq-box, fig.cap="Рисунок 3 — Сравнение моделей по R² (кросс-валидация)"}
+bwplot(resamples_result, metric = "Rsquared",
+       main = "Сравнение моделей по R²")
+```
+
+```{r fig-rmse-dot, fig.cap="Рисунок 4 — Доверительные интервалы RMSE по моделям"}
+dotplot(resamples_result, metric = "RMSE")
+```
+
+**Интерпретация.** По правилу задания победитель — модель с минимальным
+RMSE на подобранных гиперпараметрах: `r best_label`
+(RMSE = `r round(min(rmse_values), 3)`). В таблице 3 средний RMSE равен
+`r round(cv_rmse["lm"], 3)` у линейной регрессии,
+`r round(cv_rmse["knn"], 3)` у k ближайших соседей,
+`r round(cv_rmse["rf"], 3)` у случайного леса и
+`r round(cv_rmse["gbm"], 3)` у градиентного бустинга; средний R² —
+`r round(cv_r2["lm"], 3)`, `r round(cv_r2["knn"], 3)`,
+`r round(cv_r2["rf"], 3)` и `r round(cv_r2["gbm"], 3)`. У бустинга в той
+же строке MAE = `r round(cv_mae["gbm"], 3)` против
+`r round(cv_mae["rf"], 3)` у леса. Рисунки 2 и 4 показывают, что
+преимущество не сводится к одной удачной складке: ящик и интервал
+бустинга смещены вниз относительно линейной регрессии и k-NN. Рисунок 3
+согласован с этим: более высокое R² у той же группы ансамблей, и бустинг
+чуть выше леса.
+
+**Вывод.** На кросс-валидации лучшая модель — `r best_label`. У `medv`
+есть нелинейность и совместные эффекты признаков: правый хвост и пик у
+верхней границы на рисунке 1, связанные предикторы в разделе 1.4.
+Подобранная глубина взаимодействия бустинга равна
+`r models_list$gbm$bestTune$interaction.depth`, то есть модель использует
+эти совместные эффекты, а не только аддитивную прямую. Линейная регрессия
+такого не умеет и даёт наибольший RMSE. k-NN после стандартизации считает
+расстояния в пространстве `r ncol(df) - 1` признаков, и соседство
+размывается. Случайный лес нелинейность уже ловит и близок к бустингу
+(отставание RMSE — `r round(cv_rmse["rf"] - cv_rmse["gbm"], 3)`), но по
+выбранной метрике бустинг лучше: деревья подгоняются к остаткам
+последовательно. Остатки на рисунках 5–6 разбираются для
+`r best_label`; таблица 4 сравнивает все четыре модели на тесте.
+
+# 4 Прогноз на тестовой выборке
+
+::: {custom-style="Table Caption"}
+Таблица 4 — Метрики моделей на тестовой выборке
+:::
+
+```{r test-metrics}
+pred_test <- predict(best_model, newdata = test_set)
+test_metrics <- postResample(pred = pred_test, obs = test_set$medv)
+print(test_metrics)
+
+residuals_test <- test_set$medv - pred_test
+resid_mean <- mean(residuals_test)
+resid_sd <- sd(residuals_test)
+resid_max <- max(abs(residuals_test))
+resid_cor <- cor(abs(residuals_test), pred_test)
+
+test_cmp <- sapply(models_list, function(m) {
+  postResample(pred = predict(m, newdata = test_set), obs = test_set$medv)
+})
+test_rmse <- test_cmp["RMSE", ]
+test_r2 <- test_cmp["Rsquared", ]
+test_mae <- test_cmp["MAE", ]
+
+test_tbl <- data.frame(
+  Модель = unname(model_labels[colnames(test_cmp)]),
+  RMSE = unname(test_rmse),
+  R2 = unname(test_r2),
+  MAE = unname(test_mae),
+  check.names = FALSE,
+  row.names = NULL
+)
+knitr::kable(test_tbl, digits = 3)
+```
+
+Соответствие прогноза факту показано на рисунке 5, остатки — на
+рисунке 6.
+
+```{r fig-pred, fig.cap="Рисунок 5 — Фактическая и предсказанная стоимость на тестовой выборке"}
+plot(pred_test, test_set$medv,
+     xlab = "Предсказанная стоимость",
+     ylab = "Фактическая стоимость",
+     main = "Качество прогноза на тестовой выборке",
+     pch = 19, col = "steelblue")
+abline(0, 1, col = "red", lty = 2, lwd = 2)
+```
+
+```{r fig-resid, fig.cap="Рисунок 6 — Остатки прогноза на тестовой выборке"}
+plot(pred_test, residuals_test,
+     xlab = "Предсказанная стоимость",
+     ylab = "Остатки",
+     main = "График остатков",
+     pch = 19, col = "steelblue")
+abline(h = 0, col = "red", lty = 2, lwd = 2)
+```
+
+**Интерпретация.** На тесте у модели «`r best_label`» RMSE =
+`r round(unname(test_metrics["RMSE"]), 3)` тыс. долл., R² =
+`r round(unname(test_metrics["Rsquared"]), 3)`, MAE =
+`r round(unname(test_metrics["MAE"]), 3)` тыс. долл.
+Модель объясняет около
+`r round(100 * unname(test_metrics["Rsquared"]), 1)` % дисперсии
+стоимости на новых районах. По таблице 4 тестовый RMSE остальных моделей
+равен `r round(test_rmse["lm"], 3)` (линейная регрессия),
+`r round(test_rmse["knn"], 3)` (k-NN) и `r round(test_rmse["rf"], 3)`
+(случайный лес); их R² —
+`r round(test_r2["lm"], 3)`, `r round(test_r2["knn"], 3)` и
+`r round(test_r2["rf"], 3)`.
+`r if (names(which.min(test_rmse)) == best_model_name) paste0("Минимальный тестовый RMSE снова у модели «", best_label, "».") else paste0("Минимальный тестовый RMSE у модели «", unname(model_labels[names(which.min(test_rmse))]), "», тогда как по кросс-валидации лидировала «", best_label, "».")`
+Средний остаток выбранной модели равен
+`r round(resid_mean, 3)` при стандартном отклонении
+`r round(resid_sd, 3)`; максимальная абсолютная ошибка —
+`r round(resid_max, 2)` тыс. долл. Корреляция модуля остатка с прогнозом
+равна `r round(resid_cor, 3)`: чем ближе она к нулю, тем меньше
+систематический рост разброса ошибок. На рисунке 5 точки держатся вдоль
+диагонали; на рисунке 6 крупные промахи относятся к отдельным дорогим
+или нетипичным районам, а не ко всей шкале.
+
+**Вывод.** По правилу задания выбирается `r best_label`: на
+кросс-валидации у неё наименьший RMSE, а тестовый RMSE
+`r round(test_rmse[best_model_name], 3)` того же порядка, что и
+`r round(cv_rmse[best_model_name], 3)` в таблице 3. На этом разбиении
+теста чуть точнее случайный лес (RMSE `r round(test_rmse["rf"], 3)`,
+R² `r round(test_r2["rf"], 3)` против `r round(test_rmse["gbm"], 3)` и
+`r round(test_r2["gbm"], 3)` у бустинга). Отрыв леса мал рядом с ошибкой
+линейной регрессии и k-NN. Прогноз пригоден для типичного района;
+отдельные выбросы на рисунке 6 ограничивают точность точечной оценки
+дорогого жилья.
+
+# 5 Важность признаков
+
+Важность в caret по умолчанию масштабируется так, чтобы самый сильный
+предиктор внутри модели получил 100. Графики леса и бустинга — рисунки
+7 и 8, сопоставление — рисунок 9 и таблица 5.
+
+```{r varimp}
+varImp_rf <- varImp(models_list$rf)
+print(varImp_rf)
+varImp_gbm <- varImp(models_list$gbm)
+print(varImp_gbm)
+
+varImp_compare <- tryCatch(
+  varImp(resamples_result, scale = FALSE),
+  error = function(e) NULL
+)
+
+imp_rf <- varImp_rf$importance
+imp_gbm <- varImp_gbm$importance
+imp_tbl <- data.frame(
+  Переменная = rownames(imp_rf),
+  RF = imp_rf[, 1],
+  GBM = imp_gbm[rownames(imp_rf), 1],
+  check.names = FALSE,
+  row.names = NULL
+)
+imp_tbl <- imp_tbl[order(-imp_tbl$RF), ]
+top_rf <- paste(imp_tbl$Переменная[1:3], collapse = ", ")
+top_gbm <- paste(imp_tbl$Переменная[order(-imp_tbl$GBM)][1:3], collapse = ", ")
+top_rf_name <- imp_tbl$Переменная[1]
+top_gbm_name <- imp_tbl$Переменная[order(-imp_tbl$GBM)][1]
+```
+
+```{r fig-imp-rf, fig.cap="Рисунок 7 — Важность предикторов случайного леса"}
+plot(varImp_rf, main = "Важность предикторов (Random Forest)")
+```
+
+```{r fig-imp-gbm, fig.cap="Рисунок 8 — Важность предикторов градиентного бустинга"}
+plot(varImp_gbm, main = "Важность предикторов (GBM)")
+```
+
+```{r fig-imp-compare, fig.cap="Рисунок 9 — Сравнение важности предикторов RF и GBM"}
+if (!is.null(varImp_compare)) {
+  plot(varImp_compare, main = "Сравнение важности предикторов")
+} else {
+  cmp <- data.frame(
+    variable = rownames(imp_rf),
+    RF = imp_rf[, 1],
+    GBM = imp_gbm[rownames(imp_rf), 1]
+  )
+  ggplot(cmp, aes(x = RF, y = GBM, label = variable)) +
+    geom_point(color = "steelblue", size = 2.5) +
+    geom_text(vjust = -0.6, size = 3) +
+    geom_abline(slope = 1, intercept = 0, linetype = 2, color = "red") +
+    theme_minimal() +
+    labs(title = "Сравнение важности предикторов",
+         x = "Random Forest", y = "GBM")
+}
+```
+
+::: {custom-style="Table Caption"}
+Таблица 5 — Важность предикторов (шкала модели, максимум 100)
+:::
+
+```{r imp-table}
+knitr::kable(imp_tbl, digits = 1)
+```
+
+**Интерпретация.** У случайного леса на первом месте `r top_rf_name`
+(`r round(imp_tbl$RF[1], 1)`), у GBM — `r top_gbm_name`
+(`r round(max(imp_tbl$GBM), 1)`). Три лидера леса: `r top_rf`.
+Три лидера бустинга: `r top_gbm`. Рисунок 9 и таблица 5 показывают, что
+модели согласованы в верхней части списка: число комнат и социально-экономический статус района важнее налога, преступности и признака `b`.
+Это стыкуется с таблицей 2, где те же признаки давали крайние корреляции,
+но ранги внутри тройки у леса и GBM не обязаны совпасть — ансамбли
+по-разному делят вклад коррелирующих предикторов.
+
+**Вывод.** На стоимость сильнее всего влияют `r top_rf_name` и соседние
+с ним по таблице 5 признаки (`r top_rf`). Признак `b` и инфраструктурные
+переменные (`rad`, `tax`, `chas`) вносят меньший вклад. Для содержательной
+интерпретации прогноза достаточно верхней части таблицы 5.
+
+# ВЫВОДЫ
+
+По `r nrow(df)` районам BostonHousing (пропусков — `r n_na`) обучены
+четыре модели прогноза `medv`. Обучающая выборка —
+`r nrow(train_set)` наблюдений, тестовая — `r nrow(test_set)`.
+Среднее `medv` — `r round(mean(df$medv), 2)`, медиана —
+`r median(df$medv)` (рисунок 1).
+`r if (mean(df$medv) > median(df$medv)) "Среднее выше медианы, распределение имеет правый хвост." else "Среднее не выше медианы."` Сильнее всего с ценой линейно связаны `r pos_name`
+(r = `r pos_r`) и `r neg_name` (r = `r neg_r`), таблица 2.
+
+По повторной кросс-валидации (таблица 3, рисунки 2–4) наименьший RMSE
+у модели «`r best_label`» — `r round(cv_rmse[best_model_name], 3)` при R²
+`r round(cv_r2[best_model_name], 3)` и MAE
+`r round(cv_mae[best_model_name], 3)`.
+Случайный лес близок: RMSE `r round(cv_rmse["rf"], 3)`, R²
+`r round(cv_r2["rf"], 3)`; разница RMSE (лес минус бустинг) —
+`r round(cv_rmse["rf"] - cv_rmse["gbm"], 3)`.
+Линейная регрессия (RMSE `r round(cv_rmse["lm"], 3)`, R²
+`r round(cv_r2["lm"], 3)`) держит линейное допущение и не учитывает
+нелинейность и взаимодействия `medv`. k ближайших соседей (RMSE
+`r round(cv_rmse["knn"], 3)`, R² `r round(cv_r2["knn"], 3)`) проигрывает
+из-за расстояний в пространстве `r ncol(df) - 1` признаков.
+На тестовой выборке (таблица 4, рисунки 5–6) у модели «`r best_label`» RMSE =
+`r round(test_rmse[best_model_name], 3)`, R² =
+`r round(test_r2[best_model_name], 3)`, MAE =
+`r round(test_mae[best_model_name], 3)`. У градиентного бустинга, леса,
+k-NN и линейной модели тестовый RMSE равен
+`r round(test_rmse["gbm"], 3)`, `r round(test_rmse["rf"], 3)`,
+`r round(test_rmse["knn"], 3)` и `r round(test_rmse["lm"], 3)`,
+а R² — `r round(test_r2["gbm"], 3)`, `r round(test_r2["rf"], 3)`,
+`r round(test_r2["knn"], 3)` и `r round(test_r2["lm"], 3)`.
+Средний остаток выбранной модели равен `r round(resid_mean, 3)` и близок
+к нулю относительно масштаба `medv`.
+
+Важность признаков (таблица 5, рисунки 7–9) устойчиво выделяет
+`r top_rf` у леса и `r top_gbm` у бустинга. Для прогноза медианной
+стоимости жилья в этом наборе выбирается `r best_label`.
+`r if (test_rmse[best_model_name] <= min(test_rmse[c("lm", "knn", "rf")]) && test_r2[best_model_name] >= max(test_r2[c("lm", "knn", "rf")])) "И на кросс-валидации, и на тесте у неё ниже RMSE и выше R², чем у остальных трёх моделей." else paste0("На кросс-валидации у неё наименьший RMSE. На этом тесте чуть точнее случайный лес (RMSE ", round(unname(test_rmse["rf"]), 3), ", R² ", round(unname(test_r2["rf"]), 3), " против RMSE ", round(unname(test_rmse["gbm"]), 3), ", R² ", round(unname(test_r2["gbm"]), 3), " у бустинга). Отрыв небольшой, линейная регрессия и k-NN заметно хуже, а правило задания оставляет бустинг: выбирается минимум RMSE на кросс-валидации.")`
+Содержательно прогноз опирается на число комнат и показатели статуса района.
