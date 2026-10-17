@@ -113,40 +113,176 @@ def _toc_paragraph(doc, level, text, page="0"):
     return p
 
 
-def insert_toc(doc, first_element):
-    """Вставляет СОДЕРЖАНИЕ (титул + пункты) перед first_element."""
+def _first_heading_element(doc):
+    for el in doc.element.body:
+        if not el.tag.endswith("}p"):
+            continue
+        p_pr = el.find(qn("w:pPr"))
+        if p_pr is None:
+            continue
+        ps = p_pr.find(qn("w:pStyle"))
+        if ps is None:
+            continue
+        if (ps.get(qn("w:val")) or "").startswith("Heading"):
+            return el
+    return None
+
+
+def _remove_toc_block(doc):
+    """Удаляет статический или полевой блок СОДЕРЖАНИЕ до первого заголовка."""
     body = doc.element.body
+    children = list(body)
+    start = None
+    for i, el in enumerate(children):
+        if not el.tag.endswith("}p"):
+            continue
+        text = "".join(t.text or "" for t in el.findall(".//" + qn("w:t"))).strip()
+        if text == TOC_TITLE:
+            start = i
+            break
+    if start is None:
+        return 0
+    removed = 0
+    for el in children[start:]:
+        if el.tag.endswith("}p"):
+            p_pr = el.find(qn("w:pPr"))
+            ps = p_pr.find(qn("w:pStyle")) if p_pr is not None else None
+            sid = ps.get(qn("w:val")) if ps is not None else ""
+            text = "".join(t.text or "" for t in el.findall(".//" + qn("w:t"))).strip()
+            if sid.startswith("Heading") and text != TOC_TITLE:
+                break
+        elif el.tag.endswith("}tbl"):
+            break
+        body.remove(el)
+        removed += 1
+    return removed
 
-    def _new_para(insert_before, text="", bold=False, size=14,
-                  align=WD_ALIGN_PARAGRAPH.CENTER, page_break=False,
-                  after=Pt(12)):
-        p = doc.add_paragraph()
-        ppr = p._p.get_or_add_pPr()
-        if page_break:
-            br = OxmlElement("w:pageBreakBefore")
-            ppr.append(br)
-        el = copy.deepcopy(p._p)
-        body.remove(p._p)
-        first_element.addprevious(el)
-        from docx.text.paragraph import Paragraph
-        para = Paragraph(el, doc._body)
-        para.alignment = align
-        para.paragraph_format.first_line_indent = Cm(0)
-        para.paragraph_format.line_spacing = 1.0
-        para.paragraph_format.space_after = after
-        if text:
-            run = para.add_run(text)
-            run.bold = bold
-            run.font.name = sd.TNR
-            run.font.size = Pt(size)
-        return para
 
-    _new_para(first_element, TOC_TITLE, bold=True, page_break=True)
+def _detached(doc):
+    p = doc.add_paragraph()
+    el = p._p
+    el.getparent().remove(el)
+    return p
+
+
+def _fld(paragraph, kind, instr=None, dirty=False):
+    run = paragraph.add_run()
+    if kind == "instr":
+        el = OxmlElement("w:instrText")
+        el.set(qn("xml:space"), "preserve")
+        el.text = instr
+        run._r.append(el)
+        return
+    el = OxmlElement("w:fldChar")
+    el.set(qn("w:fldCharType"), kind)
+    if dirty and kind == "begin":
+        el.set(qn("w:dirty"), "true")
+    run._r.append(el)
+
+
+def _bookmark_heading(paragraph, name, bid):
+    """Закладка на заголовок — цель PAGEREF поля оглавления."""
+    p = paragraph._element
+    for old in list(p.findall(qn("w:bookmarkStart"))):
+        if (old.get(qn("w:name")) or "").startswith("_Toc"):
+            bid_old = old.get(qn("w:id"))
+            p.remove(old)
+            for end in list(p.findall(qn("w:bookmarkEnd"))):
+                if end.get(qn("w:id")) == bid_old:
+                    p.remove(end)
+    start = OxmlElement("w:bookmarkStart")
+    start.set(qn("w:id"), str(bid))
+    start.set(qn("w:name"), name)
+    end = OxmlElement("w:bookmarkEnd")
+    end.set(qn("w:id"), str(bid))
+    p_pr = p.find(qn("w:pPr"))
+    if p_pr is not None:
+        p_pr.addnext(start)
+    else:
+        p.insert(0, start)
+    p.append(end)
+
+
+def _mark_headings(doc):
+    n = 0
+    for p in doc.paragraphs:
+        if (p.style.name or "") not in ("Heading 1", "Heading 2"):
+            continue
+        if not p.text.strip():
+            continue
+        n += 1
+        _bookmark_heading(p, "_Toc%d" % n, 3000 + n)
+    return n
+
+
+def insert_toc(doc, first_element=None):
+    """Поле TOC: при открытии в Word пересобирается по заголовкам 1–2.
+
+    Кэш страниц заполняется отдельно (update_toc_from_pdf), чтобы PDF
+    сразу показывал верные номера. Новые разделы и сдвиг страниц из‑за
+    таблиц подхватывает обновление полей.
+    """
+    sd.ensure_toc_styles(doc)
+    sd.enable_update_fields(doc)
+    _remove_toc_block(doc)
+    _mark_headings(doc)
+    if first_element is None or first_element.getparent() is None:
+        first_element = _first_heading_element(doc)
+    if first_element is None:
+        return 0
+
+    page_break = first_element.getprevious() is not None
+    title = _detached(doc)
+    if page_break:
+        br = OxmlElement("w:pageBreakBefore")
+        title._p.get_or_add_pPr().append(br)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    title.paragraph_format.first_line_indent = Cm(0)
+    title.paragraph_format.line_spacing = 1.0
+    title.paragraph_format.space_after = Pt(12)
+    run = title.add_run(TOC_TITLE)
+    run.bold = True
+    run.font.name = sd.TNR
+    run.font.size = Pt(14)
+
+    begin = _detached(doc)
+    _fld(begin, "begin", dirty=True)
+    _fld(begin, "instr", ' TOC \\o "1-2" \\h \\z \\u ')
+    _fld(begin, "separate")
+
+    entries = []
     for level, text in _headings(doc):
-        entry = _toc_paragraph(doc, level, text)
-        el = copy.deepcopy(entry._p)
-        entry._p.getparent().remove(entry._p)
-        first_element.addprevious(el)
+        p = _detached(doc)
+        try:
+            p.style = doc.styles["toc %d" % level]
+        except KeyError:
+            p.style = doc.styles["TOC %d" % level]
+        p.paragraph_format.first_line_indent = Cm(0)
+        r = p.add_run(text)
+        r.bold = level == 1
+        r.font.name = sd.TNR
+        r.font.size = Pt(14)
+        tab = p.add_run("\t")
+        tab.font.name = sd.TNR
+        tab.font.size = Pt(14)
+        num = p.add_run("0")
+        num.font.name = sd.TNR
+        num.font.size = Pt(14)
+        if level == 1:
+            num.bold = True
+        entries.append(p)
+
+    end = _detached(doc)
+    _fld(end, "end")
+
+    for p in [title, begin] + entries + [end]:
+        first_element.addprevious(p._p)
+    return len(entries)
+
+
+def refresh_auto_toc(doc):
+    """Пересобрать блок СОДЕРЖАНИЕ как поле TOC."""
+    return insert_toc(doc)
 
 
 # ------------------------------------------------------------------
@@ -157,65 +293,106 @@ def _norm(s):
     return re.sub(r"\s+", " ", s).strip().lower()
 
 
-def update_toc_from_pdf(doc, pdf_path):
-    from pypdf import PdfReader
-    pages = [_norm(p.extract_text() or "") for p in PdfReader(pdf_path).pages]
-
-    # страница СОДЕРЖАНИЕ: её саму и всё до неё исключаем из поиска
-    toc_page = 0
+def _toc_pages(pages, titles):
+    """Страницы самого оглавления не считать местом заголовка."""
+    skip = set()
+    norms = [_norm(t) for t in titles]
     for i, ptext in enumerate(pages, start=1):
-        if "содержание" in ptext:
-            toc_page = i
+        if "содержание" in ptext and i <= 4:
+            skip.add(i)
+            continue
+        lines = [_norm(x) for x in re.split(r"[\n\r]+", ptext) if _norm(x)]
+        if len(lines) < 3:
+            continue
+        hits = 0
+        for line in lines:
+            core = re.sub(r"[\s\.·…]*\d+\s*$", "", line).strip()
+            for t in norms:
+                if core == t or (len(core) > 8 and (t.startswith(core) or core.startswith(t))):
+                    hits += 1
+                    break
+        if hits >= 3 and hits >= len(lines) // 2:
+            skip.add(i)
+    return skip
+
+
+def _line_is_heading(line, title):
+    if line == title:
+        return True
+    if line.startswith(title + " ") or line.startswith(title + "\t"):
+        return True
+    if line.startswith(title) and len(line) <= len(title) + 60:
+        return True
+    return False
+
+
+def update_toc_from_pdf(doc, pdf_path):
+    """Проставить номера в кэше поля TOC.
+
+    Совпадение только с начала строки заголовка: слово «выводы» внутри
+    абзаца не считается заголовком ВЫВОДЫ.
+    """
+    from pypdf import PdfReader
+    raw_pages = [p.extract_text() or "" for p in PdfReader(pdf_path).pages]
+    page_lines = []
+    for text in raw_pages:
+        page_lines.append([_norm(x) for x in re.split(r"[\n\r]+", text) if _norm(x)])
+    flat = [" ".join(lines) for lines in page_lines]
+
+    entries = []
+    seen = False
+    for p in doc.paragraphs:
+        if not seen:
+            if p.text.strip() == TOC_TITLE:
+                seen = True
+            continue
+        sid = p.style.style_id if p.style is not None else ""
+        name = p.style.name or ""
+        if name.startswith("Heading") or sid.startswith("Heading"):
             break
+        if sid not in ("TOC1", "TOC2") and name not in ("toc 1", "toc 2"):
+            continue
+        title = re.sub(r"\s+\d+\s*$", "", re.sub(r"\s+", " ", p.text)).strip()
+        if title:
+            entries.append((p, title))
+
+    skip = _toc_pages(flat, [t for _, t in entries])
 
     def find_page(title):
         t = _norm(title)
-        # 1) заголовок отдельной строкой (точное совпадение)
-        for i, ptext in enumerate(pages, start=1):
-            if i <= toc_page:
+        for i, lines in enumerate(page_lines, start=1):
+            if i in skip:
                 continue
-            lines = [_norm(x) for x in re.split(r"[\n\r]+", ptext)]
-            if t in lines:
-                return i
-        # 2) подстрока (на случай переноса длинного заголовка)
-        for i, ptext in enumerate(pages, start=1):
-            if i <= toc_page:
-                continue
-            if t in ptext:
-                return i
+            for j, line in enumerate(lines):
+                if _line_is_heading(line, t):
+                    return i
+                if j + 1 < len(lines):
+                    joined = (line + " " + lines[j + 1]).strip()
+                    if joined == t or joined.startswith(t + " "):
+                        return i
         return None
 
-    state = {"seen_title": False, "updated": 0}
-    for p in doc.paragraphs:
-        if not state["seen_title"]:
-            if p.text.strip() == TOC_TITLE:
-                state["seen_title"] = True
-            continue
-        name = p.style.name or ""
-        if name.startswith("Heading"):
-            break
-        entry = re.sub(r"\s+", " ", p.text.strip())
-        m = re.match(r"^(.*?)(\d+)$", entry)
-        if not m or not m.group(1).strip():
-            continue
-        title = m.group(1).strip()
+    updated = 0
+    for p, title in entries:
         page = find_page(title)
         if page is None:
             continue
-        runs = p.runs
-        if runs and runs[-1].text.lstrip("\t").isdigit():
-            runs[-1].text = "\t" + str(page)
-            state["updated"] += 1
-    return state["updated"]
+        texts = p._element.findall(".//" + qn("w:t"))
+        for node in reversed(texts):
+            if (node.text or "").strip().isdigit():
+                node.text = str(page)
+                updated += 1
+                break
+    return updated
 
 
 # ------------------------------------------------------------------
 # 5. Нумерация страниц в футере
 # ------------------------------------------------------------------
 
-def add_page_numbers(doc):
+def add_page_numbers(doc, blank_first=True):
     section = doc.sections[0]
-    section.different_first_page_header_footer = True
+    section.different_first_page_header_footer = blank_first
 
     # pgNumType start=1
     sect_pr = section._sectPr
@@ -246,6 +423,8 @@ def add_page_numbers(doc):
     run._r.append(instr)
     run._r.append(f2)
 
+    if not blank_first:
+        return
     # первый (титульный) футер пустой
     first = section.first_page_footer
     first.is_linked_to_previous = False
@@ -307,6 +486,7 @@ def main():
     add_page_numbers(doc)
     n_san = sd.sanitize_fonts(doc)
     n_al = enforce_alignment(doc)
+    gost = sd.enforce_gost_body(doc)
 
     if args.toc:
         # СОДЕРЖАНИЕ вставляется ПЕРЕД первым элементом тела
@@ -321,11 +501,15 @@ def main():
                     break
         if first_el is not None:
             insert_toc(doc, first_el)
+        else:
+            refresh_auto_toc(doc)
 
     doc.save(args.docx)
     print("OK:", args.docx, "| картинок отцентрировано:", n_img,
           "| стилей санитизировано:", n_san,
           "| абзацев выровнено:", n_al,
+          "| таблиц ГОСТ:", gost["tables"],
+          "| код:", gost["code"], "| вывод R:", gost["output"],
           "| СОДЕРЖАНИЕ:", "да" if args.toc else "нет")
 
 

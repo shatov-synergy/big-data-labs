@@ -259,8 +259,14 @@ def configure_styles(doc):
     for name in ("Body Text", "First Paragraph"):
         st = _get_or_add_style(doc, name, base="Normal")
         _set_style_font(st, TNR, 14, color=(0, 0, 0))
+    # Compact — ячейки kable: 12 пт, одинарный, без красной строки
     compact = _get_or_add_style(doc, "Compact", base="Normal")
+    _set_style_font(compact, TNR, 12, color=(0, 0, 0))
     compact.paragraph_format.space_after = Pt(0)
+    compact.paragraph_format.space_before = Pt(0)
+    compact.paragraph_format.line_spacing = 1.0
+    compact.paragraph_format.first_line_indent = Cm(0)
+    compact.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
     # --- Заголовки (как в ВКР: полужирные, по центру, одинарный интервал) ---
     h1 = _get_or_add_style(doc, "Heading 1", base="Normal")
@@ -343,6 +349,8 @@ def configure_styles(doc):
     tcap.paragraph_format.space_after = Pt(6)
     tcap.paragraph_format.keep_with_next = True
 
+    ensure_toc_styles(doc)
+
     # --- Стиль таблиц pandoc: одинарные границы, шапка полужирная по центру ---
     try:
         tbl_style = _get_or_add_style(doc, "Table", WD_STYLE_TYPE.TABLE, base=None)
@@ -372,12 +380,283 @@ def configure_styles(doc):
     _set_style_font(und, TNR, 14, underline=True)
 
 
+def ensure_toc_styles(doc):
+    """Стили поля оглавления: toc 1 / toc 2, точки-лидеры справа."""
+    specs = (
+        ("toc 1", "TOC1", Cm(0), True),
+        ("toc 2", "TOC2", Cm(0.75), False),
+    )
+    tab_pos = str(int(16.4 / 2.54 * 1440))
+    for name, sid, indent, bold in specs:
+        st = None
+        for key in (sid, name):
+            try:
+                st = doc.styles[key]
+                break
+            except KeyError:
+                continue
+        if st is None:
+            st = doc.styles.add_style(name, WD_STYLE_TYPE.PARAGRAPH)
+        st.element.set(qn("w:styleId"), sid)
+        name_el = st.element.find(qn("w:name"))
+        if name_el is not None:
+            name_el.set(qn("w:val"), name)
+        _set_style_font(st, TNR, 14, bold=bold, color=(0, 0, 0))
+        pf = st.paragraph_format
+        pf.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        pf.first_line_indent = Cm(0)
+        pf.left_indent = indent
+        pf.line_spacing = 1.5
+        pf.space_before = Pt(0)
+        pf.space_after = Pt(0)
+        p_pr = st.element.get_or_add_pPr()
+        for old in list(p_pr.findall(qn("w:tabs"))):
+            p_pr.remove(old)
+        tabs = OxmlElement("w:tabs")
+        tab = OxmlElement("w:tab")
+        tab.set(qn("w:val"), "right")
+        tab.set(qn("w:leader"), "dot")
+        tab.set(qn("w:pos"), tab_pos)
+        tabs.append(tab)
+        p_pr.append(tabs)
+    return True
+
+
+def enable_update_fields(doc):
+    """Word/OnlyOffice пересобирают оглавление при открытии."""
+    settings_part = None
+    for rel in doc.part.rels.values():
+        if "settings" in rel.reltype:
+            settings_part = rel.target_part
+            break
+    if settings_part is None:
+        return False
+    root = settings_part.element
+    if root.find(qn("w:updateFields")) is None:
+        uf = OxmlElement("w:updateFields")
+        uf.set(qn("w:val"), "true")
+        root.append(uf)
+    return True
+
+
 def new_document():
     """Пустой документ со всеми стандартами (страница + стили)."""
     doc = Document()
     configure_page(doc)
     configure_styles(doc)
+    sanitize_fonts(doc)
     return doc
+
+
+# ------------------------------------------------------------------
+# Постобработка тела отчёта (после R Markdown -> docx)
+# ------------------------------------------------------------------
+
+# ширина набора: A4 − лево 3 см − право 1,5 см = 16,5 см
+_BODY_TABLE_WIDTH_CM = 16.5
+
+
+def _set_run_mono_black(run, size_pt=10):
+    """Courier New, чёрный, без цветовой подсветки pandoc."""
+    run.font.name = MONO
+    run.font.size = Pt(size_pt)
+    run.font.color.rgb = RGBColor(0, 0, 0)
+    r_pr = run._element.get_or_add_rPr()
+    r_fonts = r_pr.find(qn("w:rFonts"))
+    if r_fonts is None:
+        r_fonts = OxmlElement("w:rFonts")
+        r_pr.insert(0, r_fonts)
+    for attr in ("w:ascii", "w:hAnsi", "w:cs", "w:eastAsia"):
+        r_fonts.set(qn(attr), MONO)
+    color = r_pr.find(qn("w:color"))
+    if color is None:
+        color = OxmlElement("w:color")
+        r_pr.append(color)
+    color.set(qn("w:val"), "000000")
+    # убрать theme-цвет, если есть
+    if color.get(qn("w:themeColor")) is not None:
+        del color.attrib[qn("w:themeColor")]
+
+
+def _clear_para_shading(paragraph):
+    p_pr = paragraph._element.get_or_add_pPr()
+    for shd in list(p_pr.findall(qn("w:shd"))):
+        p_pr.remove(shd)
+
+
+def _set_para_shading(paragraph, fill="F2F2F2"):
+    p_pr = paragraph._element.get_or_add_pPr()
+    for shd in list(p_pr.findall(qn("w:shd"))):
+        p_pr.remove(shd)
+    shd = OxmlElement("w:shd")
+    shd.set(qn("w:val"), "clear")
+    shd.set(qn("w:fill"), fill)
+    p_pr.append(shd)
+
+
+def _para_text(paragraph):
+    return "".join(r.text or "" for r in paragraph.runs)
+
+
+def _is_r_output_para(paragraph):
+    """Вывод knitr: Verbatim Char или строки, начинающиеся с ##."""
+    text = _para_text(paragraph).lstrip()
+    if text.startswith("##"):
+        return True
+    for run in paragraph.runs:
+        r_pr = run._element.find(qn("w:rPr"))
+        if r_pr is None:
+            continue
+        r_style = r_pr.find(qn("w:rStyle"))
+        if r_style is None:
+            continue
+        sid = r_style.get(qn("w:val")) or ""
+        if sid in ("VerbatimChar", "Verbatim Char"):
+            return True
+    return False
+
+
+def format_code_blocks(doc):
+    """Код: Courier New 10, чёрный, фон #F2F2F2.
+    Вывод R: стиль R Output, Courier New 10, без фона.
+    """
+    n_code = 0
+    n_out = 0
+    for p in doc.paragraphs:
+        sid = p.style.style_id if p.style is not None else ""
+        sname = p.style.name if p.style is not None else ""
+        if sid not in ("SourceCode", "ROutput") and sname not in (
+                "Source Code", "R Output"):
+            continue
+        if _is_r_output_para(p) or sid == "ROutput" or sname == "R Output":
+            try:
+                p.style = doc.styles["R Output"]
+            except KeyError:
+                pass
+            _clear_para_shading(p)
+            for run in p.runs:
+                _set_run_mono_black(run, 10)
+            n_out += 1
+        else:
+            try:
+                p.style = doc.styles["Source Code"]
+            except KeyError:
+                pass
+            _set_para_shading(p, "F2F2F2")
+            for run in p.runs:
+                _set_run_mono_black(run, 10)
+            n_code += 1
+    return n_code, n_out
+
+
+def _tbl_style_id(table):
+    tbl_pr = table._tbl.tblPr
+    if tbl_pr is None:
+        return None
+    st = tbl_pr.find(qn("w:tblStyle"))
+    if st is None:
+        return None
+    return st.get(qn("w:val"))
+
+
+def _set_cell_borders(cell, sz="4"):
+    tc_pr = cell._tc.get_or_add_tcPr()
+    for old in list(tc_pr.findall(qn("w:tcBorders"))):
+        tc_pr.remove(old)
+    borders = OxmlElement("w:tcBorders")
+    for edge in ("top", "left", "bottom", "right"):
+        el = OxmlElement("w:" + edge)
+        el.set(qn("w:val"), "single")
+        el.set(qn("w:sz"), sz)
+        el.set(qn("w:space"), "0")
+        el.set(qn("w:color"), "auto")
+        borders.append(el)
+    tc_pr.append(borders)
+
+
+def _set_tbl_borders(table, sz="4"):
+    tbl_pr = table._tbl.tblPr
+    if tbl_pr is None:
+        tbl_pr = OxmlElement("w:tblPr")
+        table._tbl.insert(0, tbl_pr)
+    for old in list(tbl_pr.findall(qn("w:tblBorders"))):
+        tbl_pr.remove(old)
+    borders = OxmlElement("w:tblBorders")
+    for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
+        el = OxmlElement("w:" + edge)
+        el.set(qn("w:val"), "single")
+        el.set(qn("w:sz"), sz)
+        el.set(qn("w:space"), "0")
+        el.set(qn("w:color"), "auto")
+        borders.append(el)
+    tbl_pr.append(borders)
+
+
+def _set_tbl_width_cm(table, width_cm):
+    """Фиксированная ширина таблицы на всю ширину набора, по центру."""
+    twips = int(width_cm / 2.54 * 1440)
+    tbl_pr = table._tbl.tblPr
+    if tbl_pr is None:
+        tbl_pr = OxmlElement("w:tblPr")
+        table._tbl.insert(0, tbl_pr)
+    for old in list(tbl_pr.findall(qn("w:tblW"))):
+        tbl_pr.remove(old)
+    tbl_w = OxmlElement("w:tblW")
+    tbl_w.set(qn("w:type"), "dxa")
+    tbl_w.set(qn("w:w"), str(twips))
+    tbl_pr.append(tbl_w)
+    for old in list(tbl_pr.findall(qn("w:jc"))):
+        tbl_pr.remove(old)
+    jc = OxmlElement("w:jc")
+    jc.set(qn("w:val"), "center")
+    tbl_pr.append(jc)
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+
+
+def format_body_tables(doc):
+    """Таблицы pandoc (стиль Table): границы, 12 пт, шапка полужирная.
+    Титульные безрамочные таблицы не трогаются.
+    """
+    n = 0
+    for table in doc.tables:
+        sid = _tbl_style_id(table)
+        if sid not in ("Table", "TableGrid"):
+            continue
+        _set_tbl_borders(table, "4")
+        _set_tbl_width_cm(table, _BODY_TABLE_WIDTH_CM)
+        for i, row in enumerate(table.rows):
+            for cell in row.cells:
+                _set_cell_borders(cell, "4")
+                for p in cell.paragraphs:
+                    p.paragraph_format.first_line_indent = Cm(0)
+                    p.paragraph_format.line_spacing = 1.0
+                    p.paragraph_format.space_before = Pt(0)
+                    p.paragraph_format.space_after = Pt(0)
+                    if i == 0:
+                        p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    else:
+                        p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                    for run in p.runs:
+                        run.font.name = TNR
+                        run.font.size = Pt(12)
+                        run.bold = (i == 0)
+                        r_pr = run._element.get_or_add_rPr()
+                        r_fonts = r_pr.find(qn("w:rFonts"))
+                        if r_fonts is None:
+                            r_fonts = OxmlElement("w:rFonts")
+                            r_pr.insert(0, r_fonts)
+                        for attr in ("w:ascii", "w:hAnsi", "w:cs",
+                                     "w:eastAsia"):
+                            r_fonts.set(qn(attr), TNR)
+        n += 1
+    return n
+
+
+def enforce_gost_body(doc):
+    """Постобработка кода, вывода R и таблиц тела по ГОСТ/Синергии."""
+    n_tbl = format_body_tables(doc)
+    n_code, n_out = format_code_blocks(doc)
+    return {"tables": n_tbl, "code": n_code, "output": n_out}
 
 
 # ------------------------------------------------------------------

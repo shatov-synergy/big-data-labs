@@ -36,11 +36,8 @@ data(mtcars)
 # 1 Описательные статистики и расчёт выборочной моды
 
 Функция выборочной моды реализована вручную: среди уникальных значений
-выбирается то, которое встречается чаще всего.
-
-::: {custom-style="Table Caption"}
-Таблица 1 — Описательные статистики переменных mtcars
-:::
+выбирается то, которое встречается чаще всего. Результаты приведены в
+таблице 1.
 
 ```{r mode}
 get_mode <- function(x) {
@@ -60,6 +57,13 @@ extended_stats <- data.frame(
   Max      = sapply(mtcars, max),
   row.names = NULL
 )
+```
+
+::: {custom-style="Table Caption"}
+Таблица 1 — Описательные статистики переменных mtcars
+:::
+
+```{r mode-tbl, echo=FALSE}
 knitr::kable(extended_stats)
 ```
 
@@ -142,7 +146,7 @@ ggplot(mtcars, aes(x = "", y = mpg)) +
 ```
 
 Границы нормы и список автомобилей-выбросов определяются по правилу
-1.5·IQR:
+1.5·IQR; найденные выбросы приведены в таблице 2.
 
 ```{r iqr}
 Q1 <- quantile(mtcars$mpg, 0.25)
@@ -158,10 +162,17 @@ out_rows <- mtcars[mtcars$mpg < lower_bound | mtcars$mpg > upper_bound,
                    c("mpg", "cyl", "hp")]
 out_cars <- rownames(out_rows)
 cat("Автомобили-выбросы:", paste(out_cars, collapse = ", "), "\n")
+```
+
+::: {custom-style="Table Caption"}
+Таблица 2 — Автомобили-выбросы mpg по правилу 1,5·IQR
+:::
+
+```{r iqr-tbl, echo=FALSE}
 knitr::kable(out_rows)
 ```
 
-**Вывод.** По рисунку 3 и расчёту, границы нормы составляют
+**Вывод.** По рисунку 3 и таблице 2 границы нормы составляют
 [`r round(lower_bound, 2)`; `r round(upper_bound, 2)`] миль на галлон.
 Выброс один — `r out_cars` (`r out_rows$mpg[1]` mpg, 4 цилиндра,
 `r out_rows$hp[1]` л.с.): экономичный компактный автомобиль на фоне
@@ -171,17 +182,20 @@ knitr::kable(out_rows)
 # 4 Группировка по числу цилиндров
 
 Групповые статистики, рассчитанные цепочкой `group_by()` +
-`summarise()`, приведены в таблице 2.
-
-::: {custom-style="Table Caption"}
-Таблица 2 — Групповые статистики mpg по числу цилиндров
-:::
+`summarise()`, приведены в таблице 3.
 
 ```{r group}
 group_stats <- mtcars %>%
   group_by(cyl) %>%
   summarise(n = n(), mean_mpg = mean(mpg), median_mpg = median(mpg),
             sd_mpg = sd(mpg), .groups = "drop")
+```
+
+::: {custom-style="Table Caption"}
+Таблица 3 — Групповые статистики mpg по числу цилиндров
+:::
+
+```{r group-tbl, echo=FALSE}
 knitr::kable(group_stats, digits = 2)
 ```
 
@@ -199,7 +213,7 @@ ggplot(group_stats, aes(x = factor(cyl), y = mean_mpg, fill = factor(cyl))) +
   theme(legend.position = "none")
 ```
 
-**Вывод.** По таблице 2 и рисунку 4 средний расход закономерно падает с
+**Вывод.** По таблице 3 и рисунку 4 средний расход закономерно падает с
 ростом числа цилиндров: `r round(group_stats$mean_mpg[1], 1)` →
 `r round(group_stats$mean_mpg[2], 1)` → `r round(group_stats$mean_mpg[3], 1)`
 миль на галлон для 4/6/8 цилиндров. Группы невелики
@@ -280,8 +294,28 @@ ggplot(tukey_df, aes(x = comparison, y = diff, fill = `p adj` < 0.05)) +
 распределения `mpg` (рисунок 1); нормальность подтверждена QQ-plot и
 тестом Шапиро–Уилка (W = `r round(unname(shapiro_res$statistic), 4)`,
 p = `r round(shapiro_res$p.value, 4)`); по методу IQR найден один
-выброс — Toyota Corolla (рисунок 3); группировка по цилиндрам (таблица 2,
-рисунок 4) показала монотонное снижение расхода с ростом числа
+выброс — Toyota Corolla (таблица 2, рисунок 3); группировка по цилиндрам
+(таблица 3, рисунок 4) показала монотонное снижение расхода с ростом числа
 цилиндров; t-тест (p = `r format(t_res$p.value, digits = 3)`) и ANOVA
 с тестом Тьюки (рисунок 5) статистически значимо подтвердили различия
 между всеми группами.
+
+# СПИСОК ИСПОЛЬЗОВАННЫХ ИСТОЧНИКОВ
+
+**Литература основная**
+
+1. Алетдинова, А. А. Интеллектуальный анализ больших данных: учебное пособие / А. А. Алетдинова, М. Ш. Муртазина. — Новосибирск: Новосибирский государственный технический университет, 2023. — 66 с. — ISBN 978-5-7782-4899-1. — Текст: электронный // Образовательная платформа IPR СМАРТ: [сайт]. — URL: https://www.iprbookshop.ru/books/155406/details
+
+2. Замятин, А. В. Интеллектуальный анализ данных: учебное пособие / А. В. Замятин. — Томск: Издательский Дом Томского государственного университета, 2020. — 194 с. — ISBN 978-5-94621-898-6. — Текст: электронный // Образовательная платформа IPR СМАРТ: [сайт]. — URL: https://www.iprbookshop.ru/books/116889/details
+
+**Литература дополнительная**
+
+3. Лепило, Н. Н. Анализ данных на языке R: учебное пособие / Н. Н. Лепило, И. С. Козлова. — Алчевск: Донбасский государственный технический институт, 2024. — 181 с. — Текст: электронный // Образовательная платформа IPR СМАРТ: [сайт]. — URL: https://www.iprbookshop.ru/books/151541/details
+
+**Интернет-источники**
+
+4. Мастицкий С. Э., Шитиков В. К. Статистический анализ и визуализация данных с помощью R. — М.: ДМК Пресс, 2015. — 496 с.: цв. ил. — URL: https://batrachos.com/sites/default/files/pictures/Books/Masticzkij_Shitikov_2015_Statistical_analysis_and_visualization_of_data_us%D1%96ng_R.pdf
+
+5. Yahoo Finance. Historical data for Tesla, Inc. (TSLA). — URL: https://finance.yahoo.com/quote/TSLA/history
+
+6. Wickham H. ggplot2: Create Elegant Data Visualisations Using the Grammar of Graphics : R package. — URL: https://cran.r-project.org/package=ggplot2

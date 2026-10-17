@@ -50,10 +50,13 @@ def build_reference():
     doc.save(path)
     print("OK:", path)
 
-    # копия рядом с Rmd лабораторной работы 1
-    lab_ref = os.path.join(BASE, "..", "labs", "lab-01", "reference.docx")
-    shutil.copyfile(path, os.path.normpath(lab_ref))
-    print("OK:", os.path.normpath(lab_ref))
+    # копии рядом с Rmd лабораторных
+    for lab in ("lab-01", "lab-02"):
+        lab_ref = os.path.join(BASE, "..", "labs", lab, "reference.docx")
+        lab_ref = os.path.normpath(lab_ref)
+        if os.path.isdir(os.path.dirname(lab_ref)):
+            shutil.copyfile(path, lab_ref)
+            print("OK:", lab_ref)
 
 
 if __name__ == "__main__":

@@ -104,10 +104,6 @@ cat(sprintf("Календарных торговых дней: %d, из них �
 Три теста применены к лог-цене и к доходностям; результаты сведены в
 таблицу 1.
 
-::: {custom-style="Table Caption"}
-Таблица 1 — Результаты тестов стационарности
-:::
-
 ```{r tests, collapse=TRUE}
 adf_log  <- adf.test(na.omit(df$logClose))
 kpss_log <- kpss.test(na.omit(df$logClose))
@@ -124,6 +120,13 @@ stat_tbl <- data.frame(
                       adf_ret$p.value, kpss_ret$p.value, pp_ret$p.value), 4),
   check.names = FALSE
 )
+```
+
+::: {custom-style="Table Caption"}
+Таблица 1 — Результаты тестов стационарности
+:::
+
+```{r tests-tbl, echo=FALSE}
 knitr::kable(stat_tbl)
 ```
 
@@ -184,10 +187,6 @@ Tesla с периодами роста и коррекций; сезонная �
 z-score) и три алгоритма машинного обучения (Isolation Forest, LOF,
 DBSCAN); количество обнаруженных аномалий по методам сведено в таблицу 2.
 
-::: {custom-style="Table Caption"}
-Таблица 2 — Число аномалий по методам
-:::
-
 ```{r anomalies}
 q1 <- quantile(df$ret, .25, na.rm = TRUE)
 q3 <- quantile(df$ret, .75, na.rm = TRUE)
@@ -214,7 +213,6 @@ methods_tbl <- data.frame(
   Аномалий = c(length(out_iqr), length(out_z), length(out_mz),
                length(out_iso), length(out_lof), length(out_dbscan))
 )
-knitr::kable(methods_tbl)
 
 df$anomaly <- FALSE
 df$anomaly[out_iqr] <- TRUE
@@ -223,6 +221,14 @@ df$anomaly[out_mz] <- TRUE
 df$anomaly[out_iso] <- TRUE
 df$anomaly[out_lof] <- TRUE
 df$anomaly[out_dbscan] <- TRUE
+```
+
+::: {custom-style="Table Caption"}
+Таблица 2 — Число аномалий по методам
+:::
+
+```{r anomalies-tbl, echo=FALSE}
+knitr::kable(methods_tbl)
 ```
 
 Итоговая разметка аномальных сессий объединённым признаком `anomaly`
@@ -261,3 +267,23 @@ ggplot(df, aes(x = Date, y = Close)) +
 (рисунок 4) выявила тренд без выраженной сезонности; комбинация шести
 методов (таблица 2, рисунок 5) выделила `r sum(df$anomaly)` аномальных
 сессий, согласованных с рыночными шоками.
+
+# СПИСОК ИСПОЛЬЗОВАННЫХ ИСТОЧНИКОВ
+
+**Литература основная**
+
+1. Алетдинова, А. А. Интеллектуальный анализ больших данных: учебное пособие / А. А. Алетдинова, М. Ш. Муртазина. — Новосибирск: Новосибирский государственный технический университет, 2023. — 66 с. — ISBN 978-5-7782-4899-1. — Текст: электронный // Образовательная платформа IPR СМАРТ: [сайт]. — URL: https://www.iprbookshop.ru/books/155406/details
+
+2. Замятин, А. В. Интеллектуальный анализ данных: учебное пособие / А. В. Замятин. — Томск: Издательский Дом Томского государственного университета, 2020. — 194 с. — ISBN 978-5-94621-898-6. — Текст: электронный // Образовательная платформа IPR СМАРТ: [сайт]. — URL: https://www.iprbookshop.ru/books/116889/details
+
+**Литература дополнительная**
+
+3. Лепило, Н. Н. Анализ данных на языке R: учебное пособие / Н. Н. Лепило, И. С. Козлова. — Алчевск: Донбасский государственный технический институт, 2024. — 181 с. — Текст: электронный // Образовательная платформа IPR СМАРТ: [сайт]. — URL: https://www.iprbookshop.ru/books/151541/details
+
+**Интернет-источники**
+
+4. Мастицкий С. Э., Шитиков В. К. Статистический анализ и визуализация данных с помощью R. — М.: ДМК Пресс, 2015. — 496 с.: цв. ил. — URL: https://batrachos.com/sites/default/files/pictures/Books/Masticzkij_Shitikov_2015_Statistical_analysis_and_visualization_of_data_us%D1%96ng_R.pdf
+
+5. Yahoo Finance. Historical data for Tesla, Inc. (TSLA). — URL: https://finance.yahoo.com/quote/TSLA/history
+
+6. Wickham H. ggplot2: Create Elegant Data Visualisations Using the Grammar of Graphics : R package. — URL: https://cran.r-project.org/package=ggplot2
