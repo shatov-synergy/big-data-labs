@@ -23,3 +23,6 @@ labs/lab-01/output/_verify/
 
 # артефакты headless-прогона R
 Rplots.pdf
+
+# состояние локального сканера безопасности Mimosa
+.mimosa/

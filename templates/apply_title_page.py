@@ -358,25 +358,40 @@ def update_toc_from_pdf(doc, pdf_path):
 
     skip = _toc_pages(flat, [t for _, t in entries])
 
-    def find_page(title):
+    def find_pages(title):
+        """Все страницы-кандидаты заголовка (перенос строки в абзаце
+        может дать ложное начало «выводы ...» — поэтому кандидаты
+        фильтруются монотонностью ниже)."""
         t = _norm(title)
+        out = []
         for i, lines in enumerate(page_lines, start=1):
             if i in skip:
                 continue
             for j, line in enumerate(lines):
                 if _line_is_heading(line, t):
-                    return i
+                    out.append(i)
+                    break
                 if j + 1 < len(lines):
                     joined = (line + " " + lines[j + 1]).strip()
                     if joined == t or joined.startswith(t + " "):
-                        return i
-        return None
+                        out.append(i)
+                        break
+        return out
 
+    # Заголовки в документе идут по порядку: каждому пункту оглавления
+    # назначается наименьшая страница-кандидат не меньше страницы
+    # предыдущего пункта (ложные совпадения слов из середины абзацев
+    # отбрасываются автоматически).
     updated = 0
+    last_page = 0
     for p, title in entries:
-        page = find_page(title)
+        candidates = find_pages(title)
+        page = next((c for c in candidates if c >= last_page), None)
+        if page is None and candidates:
+            page = candidates[0]
         if page is None:
             continue
+        last_page = page
         texts = p._element.findall(".//" + qn("w:t"))
         for node in reversed(texts):
             if (node.text or "").strip().isdigit():
@@ -465,6 +480,8 @@ def main():
     ap.add_argument("--year", type=int, default=2026)
     ap.add_argument("--toc", action="store_true",
                     help="вставить страницу СОДЕРЖАНИЕ после титульного")
+    ap.add_argument("--no-title", action="store_true",
+                    help="не вставлять титульный лист (уже есть в файле)")
     ap.add_argument("--update-toc", metavar="PDF",
                     help="проставить номера страниц в СОДЕРЖАНИИ по PDF")
     args = ap.parse_args()
@@ -477,10 +494,11 @@ def main():
         print("OK:", args.docx, "| обновлено пунктов СОДЕРЖАНИЕ:", n)
         return
 
-    elements = build_title_elements(args)
     body = doc.element.body
-    for el in reversed(elements):
-        body.insert(0, el)
+    if not args.no_title:
+        elements = build_title_elements(args)
+        for el in reversed(elements):
+            body.insert(0, el)
 
     n_img = center_images(doc)
     add_page_numbers(doc)
