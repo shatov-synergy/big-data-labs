@@ -1,11 +1,3 @@
-Loading required package: Matrix
-
-Attaching package: ‘arules’
-
-The following objects are masked from ‘package:base’:
-
-    abbreviate, write
-
 transactions as itemMatrix in sparse format with
  9835 rows (elements/itemsets/transactions) and
  169 columns (items) and a density of 0.02609146 
@@ -58,9 +50,6 @@ creating transaction tree ... done [0.00s].
 checking subsets of size 1 2 3 4 done [0.00s].
 writing ... [12181 rule(s)] done [0.00s].
 creating S4 object  ... done [0.00s].
-Warning message:
-In apriori(Groceries, parameter = list(support = 0.001, confidence = 0.3,  :
-  Mining stopped (maxlen reached). Only patterns up to a length of 4 returned!
 Найдено правил: 12181 
 Избыточных: 1362 | Осталось: 10819 
 
@@ -156,7 +145,6 @@ In apriori(Groceries, parameter = list(support = 0.001, confidence = 0.3,  :
 [10] {curd,                                                                                 
       domestic eggs,                                                                        
       sugar}               => {whole milk} 0.001016777          1 0.001016777 3.913649    10
-To reduce overplotting, jitter is added! Use jitter = 0 to prevent jitter.
 null device 
           1 
 null device 
@@ -227,7 +215,7 @@ null device
 
    Корзина: whole milk, other vegetables
 Корзина: whole milk, other vegetables 
-Рекомендации: frankfurter, sausage, liver loaf, ham, meat 
+Рекомендации: tropical fruit, root vegetables, yogurt, pip fruit, butter 
 
    Корзина: white bread, butter
 Правил для корзины не найдено.   (нет рекомендаций)

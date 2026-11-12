@@ -837,7 +837,14 @@ task2_summary <- list(
   ets_variants  = ets_variants,
   best_ets_spec = best_ets_spec,
   ets_label     = ets_label,
-  sarima_string = sarima_fit$method,
+  # правка (аудит З2-5.1): $method пуст в forecast 9.x, arimastring()
+  # не экспортирован — заказы собираем из arimaorder():
+  # "SARIMA(0,0,3)(1,1,1)[7]"
+  sarima_string = {
+    ao <- arimaorder(sarima_fit)
+    sprintf("SARIMA(%d,%d,%d)(%d,%d,%d)[%d]",
+            ao[1], ao[2], ao[3], ao[4], ao[5], ao[6], ao[7])
+  },
   comparison    = comparison,
   best_model    = best_model,
   lb_p_values   = lb_p,
