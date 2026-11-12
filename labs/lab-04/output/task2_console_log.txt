@@ -25,32 +25,73 @@ The following objects are masked from ‘package:base’:
 
     as.Date, as.Date.numeric
 
-Ряд: Алкоголь | дней: 1096 | с 2023-01-01 по 2025-12-31 
+Ряд: Овощи - Фрукты | дней: 1096 | с 2023-01-01 по 2025-12-31 
 Train: 1066 дней (по 2025-12-01 ) | Test: 30 дней (с 2025-12-02 )
-Средние продажи: 191.9 | SD: 42.1 | мин: 103 | макс: 379 
-Недельный профиль (средние): Понедельник=174, Вторник=179, Среда=183, Четверг=186, Пятница=225, Суббота=211, Воскресенье=184 
+Средние продажи: 755.6 | SD: 142.1 | мин: 94.063 | макс: 1521.901 
+Недельный профиль (средние): Понедельник=769, Вторник=761, Среда=751, Четверг=746, Пятница=782, Суббота=741, Воскресенье=740 
+Погода (ВДНХ, Open-Meteo): 1096 дней | осадки в 648 днях | t_mean от -27.8 до 28.9 °C
+Корреляция Temperature(файл) и t_mean(ВДНХ): 0.981 
+
+=== Корреляции продаж с факторами ===
+        factor pearson                    pearson_p spearman
+1        Price -0.2768 0.00000000000000000001014086  -0.2913
+2  Temperature -0.2460 0.00000000000000014134826095  -0.2707
+3       t_mean -0.2838 0.00000000000000000000095990  -0.3242
+4        t_max -0.2632 0.00000000000000000080712998  -0.2911
+5        t_min -0.3073 0.00000000000000000000000021  -0.3606
+6       precip -0.1302 0.00001530103294434731800965  -0.1232
+7  precip_lag1 -0.0656 0.02988272010493237332284799  -0.0711
+8  precip_lag2 -0.1146 0.00014538358520745293164106  -0.1019
+9     pressure  0.1190 0.00007791391002082473891954   0.1603
+10    humidity  0.1870 0.00000000044389444724456313   0.1695
+11        wind  0.1844 0.00000000077403781366318528   0.1886
+                                spearman_p  partial
+1  0.0000000000000000000000703117177696437 -0.47858
+2  0.0000000000000000000738658797233572218  0.03435
+3  0.0000000000000000000000000003055424655 -0.00668
+4  0.0000000000000000000000770474931243828  0.01128
+5  0.0000000000000000000000000000000000535 -0.05405
+6  0.0000430649386891012882195260702555828 -0.06468
+7  0.0185479769326541837903832288247940596  0.01876
+8  0.0007413546839461049959771332673597044 -0.03072
+9  0.0000000954392912474827466531404379819  0.05017
+10 0.0000000164023589885002725975063732951  0.07035
+11 0.0000000003105218921460890506483997028  0.20728
+
+Дождливые дни: 648 | средние продажи: 743.4 || сухие: 448 | средние: 773.1 | t-тест p = 0.000634 
+`geom_smooth()` using formula = 'y ~ x'
+`geom_smooth()` using formula = 'y ~ x'
+Warning message:
+In cor.test.default(df_ext$y, df_ext$Price, method = "spearman") :
+  cannot compute exact p-value with ties
+
+Цена: Pearson r = -0.277 (p = 0.0000000000000000000101 ) | Spearman rho = -0.291 | эластичность log-log = -0.286 
+`geom_smooth()` using formula = 'y ~ x'
+
+Макро (РФ): годы 1992–2021 | фрукты 80.3 кг/чел/год, овощи 112.5 кг/чел/год | cor(FRS,VGS) = 0.913 
+Локальный ряд по годам (шт.): 2023=300225.326, 2024=292357.299, 2025=235542.586 
                    stage weekly_seasonality n_changepoints
 1  A: weekly.seasonality                  3             40
 2  A: weekly.seasonality                  5             40
 3  A: weekly.seasonality                 10             40
 4  A: weekly.seasonality                 15             40
-5      B: n.changepoints                 10             15
-6      B: n.changepoints                 10             25
-7      B: n.changepoints                 10             40
-8        C: prior scales                 10             15
-9        C: prior scales                 10             15
-10       C: prior scales                 10             15
-11       C: prior scales                 10             15
-12       C: prior scales                 10             15
-13       C: prior scales                 10             15
-14       C: prior scales                 10             15
-15       C: prior scales                 10             15
-16       C: prior scales                 10             15
-17       C: prior scales                 10             15
-18       C: prior scales                 10             15
-19       C: prior scales                 10             15
-20      NY: pre_new_year                 10             15
-21      NY: pre_new_year                 10             15
+5      B: n.changepoints                  3             15
+6      B: n.changepoints                  3             25
+7      B: n.changepoints                  3             40
+8        C: prior scales                  3             40
+9        C: prior scales                  3             40
+10       C: prior scales                  3             40
+11       C: prior scales                  3             40
+12       C: prior scales                  3             40
+13       C: prior scales                  3             40
+14       C: prior scales                  3             40
+15       C: prior scales                  3             40
+16       C: prior scales                  3             40
+17       C: prior scales                  3             40
+18       C: prior scales                  3             40
+19       C: prior scales                  3             40
+20      NY: pre_new_year                  3             40
+21      NY: pre_new_year                  3             40
    seasonality_prior_scale changepoint_prior_scale holidays_prior_scale
 1                      0.5                    0.05                   10
 2                      0.5                    0.05                   10
@@ -71,56 +112,57 @@ Train: 1066 дней (по 2025-12-01 ) | Test: 30 дней (с 2025-12-02 )
 17                     1.0                    0.01                   10
 18                     0.5                    0.05                   10
 19                     1.0                    0.05                   10
-20                     0.5                    0.01                    1
-21                     0.5                    0.01                    1
-   pre_new_year  RMSE   MAE   MAPE
-1          TRUE 20.93 15.77  9.132
-2          TRUE 20.90 15.74  9.122
-3          TRUE 20.80 15.65  9.088
-4          TRUE 20.89 15.75  9.125
-5          TRUE 20.77 15.65  9.095
-6          TRUE 20.84 15.71  9.108
-7          TRUE 20.80 15.65  9.088
-8          TRUE 19.51 14.94  8.817
-9          TRUE 19.60 14.48  8.576
-10         TRUE 20.75 15.60  9.078
-11         TRUE 20.93 15.73  9.139
-12         TRUE 20.55 15.57  9.014
-13         TRUE 20.58 15.58  9.023
-14         TRUE 20.80 15.61  9.096
-15         TRUE 20.63 15.50  9.027
-16         TRUE 20.22 15.23  8.876
-17         TRUE 20.65 15.56  9.024
-18         TRUE 20.77 15.65  9.095
-19         TRUE 20.86 15.72  9.117
-20         TRUE 19.51 14.94  8.817
-21        FALSE 35.90 22.29 11.640
+20                     0.5                    0.05                    5
+21                     0.5                    0.05                    5
+   pre_new_year   RMSE   MAE  MAPE
+1          TRUE  94.71 74.54 11.27
+2          TRUE  94.79 74.54 11.28
+3          TRUE  95.56 74.72 11.29
+4          TRUE  95.33 74.76 11.30
+5          TRUE  95.72 74.80 11.28
+6          TRUE  95.74 74.78 11.29
+7          TRUE  94.71 74.54 11.27
+8          TRUE  98.31 74.21 11.03
+9          TRUE  96.31 73.38 10.94
+10         TRUE  95.83 75.05 11.33
+11         TRUE  95.39 74.70 11.28
+12         TRUE  97.40 73.67 10.96
+13         TRUE  98.16 73.87 10.97
+14         TRUE  94.49 74.12 11.21
+15         TRUE  95.62 74.74 11.28
+16         TRUE  96.73 73.70 10.99
+17         TRUE  99.56 74.86 11.12
+18         TRUE  94.71 74.54 11.27
+19         TRUE  95.37 74.69 11.28
+20         TRUE  94.49 74.12 11.21
+21        FALSE 113.87 82.49 12.29
 
 Лучшие параметры Prophet (по RMSE):
 List of 6
- $ weekly_seasonality     : num 10
- $ n_changepoints         : num 15
+ $ weekly_seasonality     : num 3
+ $ n_changepoints         : num 40
  $ seasonality_prior_scale: num 0.5
- $ changepoint_prior_scale: num 0.01
- $ holidays_prior_scale   : num 1
+ $ changepoint_prior_scale: num 0.05
+ $ holidays_prior_scale   : num 5
  $ use_pre_ny             : logi TRUE
-Лучшая Prophet-модель: Prophet (base + pre-NY) (RMSE = 19.51 )
+Лучшая Prophet-модель: Prophet (base) (RMSE = 94.49 )
   spec  RMSE   MAE  MAPE model_string
-1 auto 39.07 24.12 12.14   ETS(M,N,M)
-2  AAA 39.79 23.77 11.92   ETS(A,A,A)
-3  MAM 39.55 24.01 12.08  ETS(M,Ad,M)
-4  MNM 39.07 24.12 12.14   ETS(M,N,M)
-Лучшая ETS-спецификация: ETS (auto: M,N,M) 
+1 auto 87.98 61.61 9.366  ETS(M,Ad,A)
+2  AAA 87.45 61.66 9.402  ETS(A,Ad,A)
+3  MAM 88.07 62.04 9.454  ETS(M,Ad,M)
+4  MNM 87.95 61.34 9.320   ETS(M,N,M)
+Лучшая ETS-спецификация: ETS (AAA: A,Ad,A) 
 
 === Сравнение метрик ===
-# A tibble: 5 × 4
-  model                         RMSE   MAE  MAPE
-  <chr>                        <dbl> <dbl> <dbl>
-1 Prophet (base + pre-NY)       19.5  14.9  8.82
-2 Prophet (+ weather + pre-NY)  20.9  15.9  9.16
-3 Ensemble (Prophet + ETS)      24.6  18.0  9.74
-4 ETS (auto: M,N,M)             39.1  24.1 12.1 
-5 SARIMA                        46.2  30.5 15.4 
+# A tibble: 6 × 4
+  model                      RMSE   MAE  MAPE
+  <chr>                     <dbl> <dbl> <dbl>
+1 Ensemble (Prophet + ETS)   68.3  56.0  8.79
+2 ETS (AAA: A,Ad,A)          87.4  61.7  9.40
+3 Prophet (base)             94.5  74.1 11.2 
+4 Prophet (+ погода)         96.4  75.5 11.4 
+5 SARIMA                     97.3  68.8 10.0 
+6 Prophet (+ погода + цена)  97.8  77.9 11.9 
 Warning message:
 `aes_string()` was deprecated in ggplot2 3.0.0.
 ℹ Please use tidy evaluation idioms with `aes()`.
@@ -130,19 +172,17 @@ Warning message:
 null device 
           1 
 
-=== Лучшая модель по RMSE: Prophet (base + pre-NY) ===
+=== Лучшая модель по RMSE: Ensemble (Prophet + ETS) ===
 Ljung-Box p-value (lag 14) по моделям:
-     Prophet (base + pre-NY) Prophet (+ weather + pre-NY) 
-                           0                            0 
-           ETS (auto: M,N,M)                       SARIMA 
-                           0                            0 
-    Ensemble (Prophet + ETS) 
-                           0 
+           Prophet (base)        Prophet (+ погода) Prophet (+ погода + цена) 
+                   0.0000                    0.0000                    0.0000 
+        ETS (AAA: A,Ad,A)                    SARIMA  Ensemble (Prophet + ETS) 
+                   0.0000                    0.0000                    0.0002 
 
 	Ljung-Box test
 
 data:  Residuals
-Q* = 125.89, df = 14, p-value < 0.00000000000000022
+Q* = 118.46, df = 14, p-value < 0.00000000000000022
 
 Model df: 0.   Total lags used: 14
 
