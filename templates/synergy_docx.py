@@ -827,12 +827,15 @@ def add_title_page(doc, discipline="", topic="", lab_number="",
         _para(doc)
 
     # --- город и год (как в ВКР: МОСКВА 20XX г., год подчёркнут) ---
-    # «МОСКВА» прижата к низу страницы отступом сверху абзаца
+    # «МОСКВА» прижата к низу страницы отступом сверху абзаца.
+    # 40 пт (было 220): по фактической разметке LibreOffice нижняя строка
+    # таблицы участников заканчивается на ~656 пт, до нижнего поля остаётся
+    # ~130 пт; 220/180 пт выталкивали строку на вторую страницу.
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p.paragraph_format.first_line_indent = Cm(0)
     p.paragraph_format.line_spacing = 1.0
-    p.paragraph_format.space_before = Pt(220)
+    p.paragraph_format.space_before = Pt(40)
     r = p.add_run("МОСКВА ")
     r.bold = True
     r.font.name = TNR

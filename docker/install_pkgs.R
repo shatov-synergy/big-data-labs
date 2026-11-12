@@ -26,7 +26,18 @@ pkgs <- c("plotly", "quantmod", "forecast", "tseries", "moments",
           "zoo", "FinTS", "outliers", "htmlwidgets", "broom",
           # Лабораторный практикум 2: кластеризация Wine и регрессия Boston
           "tidyverse", "factoextra", "patchwork", "caret", "rattle",
-          "mlbench", "randomForest", "gbm", "e1071")
+          "mlbench", "randomForest", "gbm", "e1071",
+          # Лабораторный практикум 3: пространственный стек (sf, spdep,
+          # spatialreg, geosphere) ставится ad hoc скриптом
+          # labs/lab-03/setup_spatial.sh — требует системные GDAL/GEOS/PROJ,
+          # которых нет в образе.
+          # Лабораторный практикум 4: ассоциативные правила и прогнозирование
+          # (igraph — движок графов в arulesViz, в rocker/rstudio отсутствует;
+          # пакет holidays НЕ нужен: prophet содержит собственные данные
+          # праздников для add_country_holidays, а с CRAN он недоступен
+          # для этой версии R)
+          "arules", "arulesViz", "igraph", "prophet", "yardstick",
+          "readxl")
 
 install.packages(pkgs, Ncpus = 2)
 

@@ -7,7 +7,8 @@
 FROM rocker/rstudio:4.6.1
 
 # Системные библиотеки для компиляции R-пакетов из исходников:
-# cmake — nloptr; libcurl/libxml2 — R-пакеты curl, XML и зависимые.
+# cmake — nloptr; libcurl/libxml2 — R-пакеты curl, XML и зависимые;
+# libgmp/libglpk — igraph (его импортирует arulesViz для графов правил).
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
       cmake \
@@ -22,6 +23,8 @@ RUN apt-get update \
       libtiff-dev \
       libwebp-dev \
       libfontconfig1-dev \
+      libgmp-dev \
+      libglpk-dev \
   && rm -rf /var/lib/apt/lists/*
 
 # Пакеты, необходимые для лабораторных работ (задачи 2 и 3).
