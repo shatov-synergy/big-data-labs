@@ -7,7 +7,7 @@ knit: (function(input, ...) { rmarkdown::render(input, output_dir = "output", ..
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
-                      fig.width = 7.2, fig.height = 5,
+                      fig.width = 7.2, fig.height = 4.2,
                       cache = TRUE)
 ```
 
@@ -116,18 +116,18 @@ k_gap
 
 Метод силуэта показан на рисунке 1, статистика разрыва — на рисунке 2.
 
-```{r fig-sil, echo=FALSE, fig.cap="Рисунок 1 — Выбор числа кластеров методом силуэта"}
-p_sil
-```
-
-```{r fig-gap, echo=FALSE, fig.cap="Рисунок 2 — Статистика разрыва (Gap Statistic)"}
-p_gap
-```
-
 **Интерпретация.** Максимум среднего силуэта достигается при k =
 `r k_sil`. Статистика разрыва (правило firstSEmax, им же пользуется
 `fviz_gap_stat`) указывает на k = `r k_gap`. Оба ориентира сопоставляются
 с известным числом типов вина.
+
+```{r fig-sil, echo=FALSE, fig.height=3.6, fig.cap="Рисунок 1 — Выбор числа кластеров методом силуэта"}
+p_sil
+```
+
+```{r fig-gap, echo=FALSE, fig.height=3.6, fig.cap="Рисунок 2 — Статистика разрыва (Gap Statistic)"}
+p_gap
+```
 
 **Вывод.** Для сравнения с истинными классами далее фиксируется k = 3,
 как требует задание. Если оценка по силуэту или по gap отличается от 3,
@@ -187,15 +187,15 @@ plot_pca <- function(clusters, title) {
 Расположение кластеров показано ниже: K-means (рисунок 3), PAM
 (рисунок 4) и CLARA (рисунок 5).
 
-```{r fig-pca-km, fig.cap="Рисунок 3 — Кластеры K-means в пространстве двух главных компонент"}
+```{r fig-pca-km, fig.width=9, fig.height=3.1, fig.cap="Рисунок 3 — Кластеры K-means в пространстве двух главных компонент"}
 plot_pca(km$cluster, "PCA + K-means")
 ```
 
-```{r fig-pca-pam, fig.cap="Рисунок 4 — Кластеры PAM в пространстве двух главных компонент"}
+```{r fig-pca-pam, fig.width=9, fig.height=3.1, fig.cap="Рисунок 4 — Кластеры PAM в пространстве двух главных компонент"}
 plot_pca(pam_fit$clustering, "PCA + PAM")
 ```
 
-```{r fig-pca-clara, fig.cap="Рисунок 5 — Кластеры CLARA в пространстве двух главных компонент"}
+```{r fig-pca-clara, fig.width=9, fig.height=3.1, fig.cap="Рисунок 5 — Кластеры CLARA в пространстве двух главных компонент"}
 plot_pca(clara_fit$clustering, "PCA + CLARA")
 ```
 
@@ -365,16 +365,16 @@ ARI (CLARA минус PAM) равна `r round(ari_clara - ari_pam, 3)`, а
 
 **Литература основная**
 
-1. Замятин, А. В. Интеллектуальный анализ данных: учебное пособие / А. В. Замятин. — Томск: Издательский Дом Томского государственного университета, 2020. — 194 с. — ISBN 978-5-94621-898-6. — Текст: электронный // Образовательная платформа IPR СМАРТ: [сайт]. — URL: https://www.iprbookshop.ru/books/116889/details
+1. Замятин, А. В. Интеллектуальный анализ данных: учебное пособие / А. В. Замятин. — Томск: Издательский Дом Томского государственного университета, 2020. — 194 с. — ISBN 978-5-94621-898-6. — Текст: электронный // Образовательная платформа IPR СМАРТ: [сайт]. — URL: https://www.iprbookshop.ru/books/116889/details (дата обращения: 13.11.2026).
 
 **Литература дополнительная**
 
-2. Лепило, Н. Н. Анализ данных на языке R: учебное пособие / Н. Н. Лепило, И. С. Козлова. — Алчевск: Донбасский государственный технический институт, 2024. — 181 с. — Текст: электронный // Образовательная платформа IPR СМАРТ: [сайт]. — URL: https://www.iprbookshop.ru/books/151541/details
+2. Лепило, Н. Н. Анализ данных на языке R: учебное пособие / Н. Н. Лепило, И. С. Козлова. — Алчевск: Донбасский государственный технический институт, 2024. — 181 с. — Текст: электронный // Образовательная платформа IPR СМАРТ: [сайт]. — URL: https://www.iprbookshop.ru/books/151541/details (дата обращения: 13.11.2026).
 
 **Интернет-источники**
 
-3. Шитиков В. К., Мастицкий С. Э. Классификация, регрессия и другие алгоритмы Data Mining с использованием R. — URL: https://ranalytics.github.io/data-mining/
+3. Шитиков, В. К. Классификация, регрессия и другие алгоритмы Data Mining с использованием R / В. К. Шитиков, С. Э. Мастицкий. — Текст: электронный // R Analytics: [сайт]. — URL: https://ranalytics.github.io/data-mining/ (дата обращения: 13.11.2026).
 
-4. UCI Machine Learning Repository. Wine. — URL: https://archive.ics.uci.edu/dataset/109/wine
+4. Wine Data Set // UCI Machine Learning Repository: [сайт]. — URL: https://archive.ics.uci.edu/dataset/109/wine (дата обращения: 13.11.2026).
 
-5. StatLib — Boston Housing Data. — URL: https://lib.stat.cmu.edu/datasets/boston
+5. Boston Housing Data // StatLib: [сайт]. — URL: https://lib.stat.cmu.edu/datasets/boston (дата обращения: 13.11.2026).

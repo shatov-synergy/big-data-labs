@@ -7,7 +7,7 @@ knit: (function(input, ...) { rmarkdown::render(input, output_dir = "output", ..
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE,
-                      fig.width = 7.2, fig.height = 5,
+                      fig.width = 7.2, fig.height = 4.2,
                       cache = TRUE)
 ```
 
@@ -546,16 +546,16 @@ k-NN и линейной модели тестовый RMSE равен
 
 **Литература основная**
 
-1. Замятин, А. В. Интеллектуальный анализ данных: учебное пособие / А. В. Замятин. — Томск: Издательский Дом Томского государственного университета, 2020. — 194 с. — ISBN 978-5-94621-898-6. — Текст: электронный // Образовательная платформа IPR СМАРТ: [сайт]. — URL: https://www.iprbookshop.ru/books/116889/details
+1. Замятин, А. В. Интеллектуальный анализ данных: учебное пособие / А. В. Замятин. — Томск: Издательский Дом Томского государственного университета, 2020. — 194 с. — ISBN 978-5-94621-898-6. — Текст: электронный // Образовательная платформа IPR СМАРТ: [сайт]. — URL: https://www.iprbookshop.ru/books/116889/details (дата обращения: 13.11.2026).
 
 **Литература дополнительная**
 
-2. Лепило, Н. Н. Анализ данных на языке R: учебное пособие / Н. Н. Лепило, И. С. Козлова. — Алчевск: Донбасский государственный технический институт, 2024. — 181 с. — Текст: электронный // Образовательная платформа IPR СМАРТ: [сайт]. — URL: https://www.iprbookshop.ru/books/151541/details
+2. Лепило, Н. Н. Анализ данных на языке R: учебное пособие / Н. Н. Лепило, И. С. Козлова. — Алчевск: Донбасский государственный технический институт, 2024. — 181 с. — Текст: электронный // Образовательная платформа IPR СМАРТ: [сайт]. — URL: https://www.iprbookshop.ru/books/151541/details (дата обращения: 13.11.2026).
 
 **Интернет-источники**
 
-3. Шитиков В. К., Мастицкий С. Э. Классификация, регрессия и другие алгоритмы Data Mining с использованием R. — URL: https://ranalytics.github.io/data-mining/
+3. Шитиков, В. К. Классификация, регрессия и другие алгоритмы Data Mining с использованием R / В. К. Шитиков, С. Э. Мастицкий. — Текст: электронный // R Analytics: [сайт]. — URL: https://ranalytics.github.io/data-mining/ (дата обращения: 13.11.2026).
 
-4. UCI Machine Learning Repository. Wine. — URL: https://archive.ics.uci.edu/dataset/109/wine
+4. Wine Data Set // UCI Machine Learning Repository: [сайт]. — URL: https://archive.ics.uci.edu/dataset/109/wine (дата обращения: 13.11.2026).
 
-5. StatLib — Boston Housing Data. — URL: https://lib.stat.cmu.edu/datasets/boston
+5. Boston Housing Data // StatLib: [сайт]. — URL: https://lib.stat.cmu.edu/datasets/boston (дата обращения: 13.11.2026).
