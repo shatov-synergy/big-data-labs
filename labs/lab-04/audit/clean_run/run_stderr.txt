@@ -1,0 +1,12 @@
+Loading required package: Matrix
+
+Attaching package: ‘arules’
+
+The following objects are masked from ‘package:base’:
+
+    abbreviate, write
+
+Warning message:
+In apriori(Groceries, parameter = list(support = 0.001, confidence = 0.3,  :
+  Mining stopped (maxlen reached). Only patterns up to a length of 4 returned!
+To reduce overplotting, jitter is added! Use jitter = 0 to prevent jitter.

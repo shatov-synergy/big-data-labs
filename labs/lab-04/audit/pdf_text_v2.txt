@@ -1,0 +1,732 @@
+НЕГОСУДАРСТВЕННОЕ ОБРАЗОВАТЕЛЬНОЕ ЧАСТНОЕ УЧРЕЖДЕНИЕ
+                ВЫСШЕГО ОБРАЗОВАНИЯ
+      «МОСКОВСКИЙ ФИНАНСОВО-ПРОМЫШЛЕННЫЙ
+              УНИВЕРСИТЕТ «СИНЕРГИЯ»»
+
+                          Факультет Информационных технологий
+
+Направление                        09.03.02         Кафедра                      ИИиАД
+подготовки:                    Информационные
+                                  системы и
+                                 технологии
+
+    (код, наименование)                                                          (аббревиатура)
+
+
+
+
+Профиль:                            Разработка, сопровождение и обеспечение безопасности
+                                                   информационных систем
+
+                   ОТЧЕТ ПО ЛАБОРАТОРНОЙ РАБОТЕ № 4
+по дисциплине «Продвинутые технологии работы с большими данными»
+
+
+на тему                                                Анализ потребительской корзины
+                                                                  (Apriori)
+
+
+
+Обучающийся                                                 Шатов Илья Андреевич
+
+                  (Фамилия Имя Отчество)                             (подпись)
+
+
+
+Группа                                                           ДМЭ-101цэии
+
+
+Преподаватель                                            Дзизинская Диана Викторовна
+
+                  (Фамилия Имя Отчество)                             (подпись)
+
+
+
+
+                                           МОСКВА 2026 г.
+                                              СОДЕРЖАНИЕ
+
+
+ВВЕДЕНИЕ............................................................................................................ 3
+1 Данные и ассоциативные правила.................................................................4
+     1.1 Построение правил и удаление избыточных...........................................5
+     1.2 Сильные правила........................................................................................ 6
+3 Система рекомендаций: прямой и обратный вывод..................................9
+4 Бизнес-рекомендации по категориям..........................................................11
+5 Ограничения анализа..................................................................................... 13
+ВЫВОДЫ.............................................................................................................14
+ПРИЛОЖЕНИЕ А. Текст R-скрипта анализа..............................................15
+
+
+
+
+                                                              2
+                               ВВЕДЕНИЕ
+     Условие. Запустить предоставленный R-скрипт, который строит
+ассоциативные правила для датасета Groceries (9835 транзакций, 169
+товаров): алгоритм Apriori с параметрами support = 0,001 и confidence = 0,3,
+удаление избыточных правил, выделение бизнес-правил (lift > 1,2) и сильных
+(support ≥ 0,5%, lift > 2), визуализации, функция рекомендаций с прямым и
+обратным выводом, автоматическое формирование бизнес-рекомендаций по
+категориям (завтрак, выпечка, алкоголь, снеки, быстрый ужин, фрукты-
+овощи) и обратный вывод для молока. В отчёте объяснить смысл метрик
+support, confidence и lift на конкретных примерах, разобрать, почему для
+одних категорий правила найдены, а для других нет, объяснить разницу
+прямого    и   обратного     вывода,     предложить   практические     бизнес-
+рекомендации и описать ограничения анализа.
+     Цель работы — выявить устойчивые связи между товарами в
+покупательских    корзинах    сетевого     магазина   и   превратить    их   в
+управленческие решения: выкладку, комплектацию наборов и ценовые
+акценты.
+
+     Работа выполнена на языке R в среде RStudio (Docker-образ big-data-
+labs-rstudio) с использованием пакетов arules и arulesViz по методическому
+
+скрипту преподавателя.
+
+
+
+
+                                          3
+                   1 Данные и ассоциативные правила
+     Датасет Groceries входит в пакет arules и содержит реальные чеки
+продуктового магазина за месяц: 9 835 транзакций и 169 уникальных товаров
+(транзакция    —    одна   покупательская   корзина,   состав   известен         без
+количества). Средняя длина корзины — 4.41 товара. Самые частые товары —
+товары-магниты (рисунок 1): whole milk присутствует в 25.6% корзин, other
+vegetables — в 19.3%, rolls/buns — в 18.4%.
+
+
+
+
+              Рисунок 1 — Топ-20 товаров по доле транзакций
+
+     Распределение длины транзакций (рисунок 2) скошено вправо:
+основная масса чеков — 1–5 товаров, длинные корзины редки. Поэтому в
+параметрах Apriori ограничена длина правил: minlen       =   2, maxlen   =   4   —
+правила из 5+ товаров опирались бы на единичные чеки.
+
+
+
+
+                                        4
+   Рисунок 2 — Распределение длины транзакций (красная линия —
+                             среднее)
+
+     Правило ассоциации X → Y («если в корзине есть набор X, то в ней же
+присутствует Y») характеризуют три метрики: support (поддержка) supp(X
+→ Y) = P(X ∪ Y) — доля транзакций, содержащих и X, и Y; confidence
+(достоверность) conf(X → Y) = supp(X → Y)/supp(X) — условная вероятность
+Y при наличии X; lift (подъём) lift(X → Y) = conf(X → Y)/supp(Y) — во
+сколько раз условная вероятность Y превышает безусловную (lift > 1 —
+вместе покупают чаще независимости, lift = 1 — независимы). На примере
+датасета: правило {citrus fruit, other vegetables, whole milk} → {root
+vegetables} имеет lift 4.1 — корнеплоды попадают в корзину с цитрусами,
+овощами и молоком в несколько раз чаще случайного; confidence 45%
+означает, что среди корзин с цитрусами, овощами и молоком примерно в
+каждой 2-й лежат и корнеплоды; но поддержка — лишь 0.58% корзин.
+
+             1.1 Построение правил и удаление избыточных
+     Apriori запускался с широкой сеткой (support = 0,001; confidence = 0,3),
+чтобы не потерять редкие, но ценные связи.
+rules <- apriori(Groceries,
+                 parameter = list(support = 0.001, confidence = 0.3,
+                                  minlen = 2, maxlen = 4, target = "rules"))
+
+
+                                         5
+redundant <- is.redundant(sort(rules, by = "lift", decreasing = TRUE),
+                          measure = "confidence")
+rules_pruned <- sort(rules, by = "lift", decreasing = TRUE)[!redundant]
+
+Таблица 1 — Воронка отбора правил
+                   Этап                                        Количество
+Найдено Apriori                                 12 181
+Избыточные правила                              1 362
+После очистки                                   10 819
+Бизнес-правила (lift > 1,2)                     10 736
+Сильные правила (support ≥ 0,5%, lift > 2)      255
+      Правило избыто, если существует более общее правило с тем же RHS и
+не меньшей достоверностью: например, если {A, B} → C и {A} → C имеют
+одну confidence, то условие B ничего не добавляет. После очистки остаётся
+10 819 правил (таблица 1) — каждое несёт самостоятельную информацию.
+Отметим, что фильтр бизнес-правил помимо lift > 1,2 требует строго support
+> 0,001 и confidence > 0,3, поэтому правила с confidence ровно 30% остаются
+
+за границей бизнес-набора (в сильные правила confidence не фильтруется по
+условию задания).
+
+                                    1.2 Сильные правила
+      Сильные правила (support ≥ 0,5% и lift > 2) — пересечение «часто» и
+«выразительно»: они опираются минимум на 50 чеков и поднимают
+вероятность покупки в два с лишним раза. Топ-5 правил по lift приведены в
+таблице 2.
+
+Таблица 2 — Топ-5 сильных правил по lift
+                                   Правило                             Sup    Con    Lif
+                                                                         p.     f.     t
+citrus fruit,other vegetables,whole milk → root vegetables             0.00   0.44   4.0
+                                                                       6      5      9
+herbs → root vegetables                                                0.00   0.43   3.9
+                                                                       7      1      6
+citrus fruit,pip fruit → tropical fruit                                0.00   0.40   3.8
+                                                                       6      4      5
+tropical fruit,other vegetables,whole milk → root vegetables           0.00   0.41   3.7
+                                                                       7      1      7
+root vegetables,whole milk,yogurt → tropical fruit                     0.00   0.39   3.7
+                                                                       6      2      3
+      На диаграмме рассеяния (рисунок 3) каждое правило — точка: по оси X
+— support, по оси Y — confidence, цвет — lift. Виден классический «закон
+
+                                                  6
+рынка»: с ростом support confidence падает — самые частые правила
+связывают товары-магниты и потому имеют lift, близкий к 1, а высокие lift
+достигаются на редких сочетаниях.
+
+
+
+
+Рисунок 3 — Бизнес-правила: поддержка против достоверности (цвет —
+                                lift)
+
+     Граф сильных правил (рисунок 4) показывает ядро связей: молоко,
+овощи, йогурт и булочки — центральные вершины, к которым стягиваются
+условия большинства правил.
+
+
+
+
+                                      7
+       Рисунок 4 — Граф топ-15 сильных правил (support ≥ 0,5%)
+
+      Вывод. Из 12 181 найденных правил практическую ценность имеют
+255   сильных:   они   одновременно     статистически    надёжны     (высокая
+поддержка) и бизнес-значимы (lift > 2). Связка {butter, whipped/sour cream} →
+{whole milk} (lift 2.6) и {citrus fruit, other vegetables, whole milk} → {root
+vegetables} (lift 4.1) — характерные представители.
+
+
+
+
+                                         8
+       3 Система рекомендаций: прямой и обратный вывод
+      Функция recommend_for_basket() ищет правила двух типов для товаров
+переданной корзины.
+      Прямой вывод — правила вида «корзина ⊆ LHS»: если товары
+корзины содержатся в левой части правила, рекомендуются товары из RHS.
+Логика: «кто берёт X, тот берёт и Y».
+
+      Обратный вывод — правила вида «корзина ⊆ RHS»: товар корзины
+оказался в правой части, рекомендуются товары из LHS. Логика обратная:
+«кто берёт Y, обычно перед этим взял X». Это не то же самое, что прямой
+вывод: ассоциативные правила несимметричны.
+
+      Характерный пример — корзина {whole milk, other vegetables}.
+Применённые правила функция ранжирует по confidence и возвращает:
+tropical fruit, root vegetables, yogurt, pip fruit, butter (таблица 3). Первыми
+срабатывают «зеркальные» правила, где молоко стоит справа: {tropical fruit,
+root vegetables, yogurt} → {whole milk} (confidence 70%), {pip fruit, root
+vegetables, other vegetables} → {whole milk} (confidence 68%) и {butter,
+whipped/sour cream} → {whole milk} (confidence 66%). Прямого правила
+«молоко + овощи → фрукты» в данных нет — рекомендации приходят из
+LHS этих правил: это и есть обратный вывод. Асимметрия хорошо видна и на
+мясных товарах: правило {meat} → {whole milk} (support 1.0%, confidence
+39%, lift 1.51) в сильные не входит (lift < 2), но его сильные «соседи»
+{sausage, whipped/sour cream} → {whole milk} (confidence 56%, lift 2.20) и
+{frankfurter, yogurt} → {whole milk} (confidence 55%, lift 2.17) устроены так
+же: мясное покупают «вместе с молоком», а не наоборот — направление
+правила одностороннее.
+
+Таблица 3 — Примеры рекомендаций для корзин
+          Корзина                                       Рекомендации
+whole milk, other vegetables   tropical fruit, root vegetables, yogurt, pip fruit, butter
+white bread, butter            — (правил с support ≥ 0,5% нет)
+bottled beer, red/blush wine   — (правил с support ≥ 0,5% нет)
+
+
+                                                   9
+      Для корзин {white bread, butter} и {bottled beer, red/blush wine} сильных
+правил нет: совместные покупки этих пар реже порога 0,5% — сами по себе
+это ценные сигналы о границах метода (см. раздел 5).
+      Обратный вывод для молока по всем правилам с support ≥ 0,5% показан
+в таблице 4: молоко оказывается в корзинах, которые уже «собрались»
+вокруг овощей, фруктов и масла — типичный товар-«зеркало».
+
+Таблица 4 — Топ-3 правила вида {набор} → {whole milk} (обратный
+вывод)
+ Что уже лежит в корзине                 Conf.                 Supp.
+tropical fruit,root               0.70               0.0057
+vegetables,yogurt
+pip fruit,root vegetables,other   0.68               0.0055
+vegetables
+butter,whipped/sour cream         0.66               0.0067
+      Вывод. Прямой вывод отвечает на вопрос «что ещё положит
+покупатель с этими товарами», обратный — «что уже лежало в корзинах, где
+покупают этот товар». Для молока как товара-магнита решающим
+оказывается именно обратный вывод.
+
+
+
+
+                                             10
+                4 Бизнес-рекомендации по категориям
+     Автоматический подбор готовых наборов проверял для каждой
+категории сильные правила, где в LHS и RHS суммарно встречается не менее
+двух товаров категории (таблица 5).
+
+Таблица 5 — Сильные правила по категориям
+  Категория          Правил                            Комментарий
+                     найдено
+Завтрак         19                 хлеб + масло + молоко + яйца
+Выпечка         0                  нет: мука/сахар/маргарин редко в одном чеке
+Алкоголь        0                  нет: пиво/вино покупают отдельно
+Снеки           0                  нет: снеки — импульсная одиночная покупка
+Быстрый         3                  сосиски + булочки: «хот-дог-эффект»
+ужин
+Фрукты-         86                 овощи, корнеплоды, цитрусы, фрукты
+овощи
+     Категории разделились на «рабочие» (Фрукты-овощи — 86 правил,
+Завтрак — 19, Быстрый ужин — 3) и «пустые» (Выпечка, Алкоголь, Снеки —
+0 правил). Причина — порог support ≥ 0,5%: пары «мука + сахар», «пиво +
+вино», «чипсы + газировка» встречаются реже, чем в 50 чеках из 9 835 (то
+есть реже полпроцента корзин). Это не отсутствие связи, а её недостаточная
+частота: такие покупки ситуативны, а не рутинны.
+     На основе найденных правил сформулированы управленческие
+рекомендации.
+
+  1. Кросс-выкладка. {citrus fruit, other vegetables, whole milk} → {root vegetables} (lift
+     4.1) — сезонные овощи и корнеплоды размещать в одном маршруте с цитрусами;
+     {butter, whipped/sour cream} → {whole milk} — молочную группу собирать вокруг
+     масла и сливок.
+  2. Bundle-акции. {rolls/buns, shopping bags} → {sausage} — готовые наборы
+     «булочки + сосиски», покупаемые с пакетом (lift 3.3, классический «хот-дог-
+     эффект» на вынос): скидка на набор выше, чем на части.
+  3. Цена на товары-магниты. whole milk (25.6% корзин), other vegetables, rolls/buns
+     держат конкурентными: они формируют трафик, а маржа набирается
+     сопутствующими товарами из правил. Магниты ставить в глубине зала — маршрут
+     до них проходит мимо полок с сопутствующими.
+  4. Промо-наборы «Завтрак» (хлеб + масло + молоко/яйца — 19 правил) — готовые
+     корзины выходного дня и «пятничный ужин» (овощи + сосиски + булочки).
+     Вывод.       Правила      конвертируются         в    четыре      типа     решений:
+маршрутизация потока (выкладка), комплектация наборов (bundle), ценевые
+
+
+                                               11
+якоря (товары-магниты) и тематические промо. Наибольший запас — у
+категорий с высокой частотой: «Фрукты-овощи» и «Завтрак».
+
+
+
+
+                                     12
+                        5 Ограничения анализа
+     Почему алкоголь и снеки не дали сильных правил. Алкоголь и
+снеки — штучные импульсные позиции: их пары встречаются реже, чем в 50
+чеках из 9 835, и порог support ≥ 0,5% отсекает такие связи как статистически
+ненадёжные (при частоте ниже ~50 чеков confidence меняется на десятки
+процентных пунктов от смены пары дней данных). Это не отсутствие связи, а
+её недостаточная частота: сами связи могут быть выраженными, но редкими.
+     Зачем удалять избыточные правила. Избыточное правило —
+частный случай более общего ({A, B} → C при том же confidence, что и {A}
+→ C); без очистки 1 362 правил из 12 181 — дублирующий шум,
+искажающий приоритезацию по lift.
+
+     Почему support — ключевая метрика для практики. Confidence и
+lift можно «настроить» на любом сколь угодно редком правиле: пара из 3
+чеков покажет confidence 100% и огромный lift без устойчивости и охвата.
+Support — единственная метрика, связывающая правило с реальным потоком
+чеков, поэтому бизнес-фильтрация начинается с порога support, и лишь затем
+ранжируются confidence и lift.
+
+     Наконец,    правила    фиксируют     совместность    покупок,    а   не
+причинность (ассоциация ≠ причинность): управленческие решения из
+раздела 4 — гипотезы для пилотной проверки (A/B-тест выкладки или
+набора), а не гарантия роста продаж. Дополнительные ограничения: данные
+одного месяца и одного магазина (нет сезонности и географии), отсутствие
+количества и цены в чеке, пороги 0,5%/2 — консервативный компромисс
+охвата и надёжности.
+
+
+
+
+                                        13
+                                 ВЫВОДЫ
+      В датасете Groceries (9 835 чеков) алгоритм Apriori нашёл 12 181
+правил, из которых после удаления избыточных осталось 10 819, бизнес-
+значимых (lift > 1,2) — 10 736, сильных (support ≥ 0,5%, lift > 2) — 255.
+      Главные результаты: (1) выявлено ядро товаров-магнитов — молоко
+(25.6% корзин), овощи, булочки, газировка, йогурт; (2) найдены устойчивые
+межкатегорийные связи с lift до 4.1 — цитрусы+овощи+молоко →
+корнеплоды, масло+сливки → молоко, булочки+пакеты → сосиски; (3)
+подтверждено, что рабочие наборы существуют в категориях «Фрукты-
+овощи» (86 правил), «Завтрак» (19), «Быстрый ужин» (3), а «Выпечка»,
+«Алкоголь» и «Снеки» правил с support ≥ 0,5% не дают — их совместные
+покупки слишком редки; (4) построена рекомендательная функция с прямым
+и обратным выводом: для корзины {молоко, овощи} она предлагает фрукты
+и масло — товары из LHS «зеркальных» правил вида {tropical fruit, root
+vegetables, yogurt} → {whole milk}, подчёркивая асимметрию ассоциативных
+правил.
+
+      Практическая ценность — готовые решения по выкладке, bundle-
+наборам, ценовым якорям и промо-категориям; ограничение — порог support
+≥ 0,5% отсекает редкие, но потенциально прибыльные связи (алкоголь,
+снеки), для которых нужен либо больший объём данных, либо пониженный
+порог.
+
+
+
+
+                                         14
+           ПРИЛОЖЕНИЕ А. Текст R-скрипта анализа
+     Полный      код    выполненного     скрипта      task1_groceries_apriori.R
+
+(воспроизводится дословно):
+# =====================================================================
+# Лабораторный практикум 4. Задача 1.
+# Анализ потребительской корзины (Groceries) — ассоциативные правила.
+#
+# Код преподавателя (assignments/lab-04/Skript koda ... Zadacha 1_Groceries
+# Apriori.docx) сохранён максимально дословно. Технические правки
+# (задокументированы по требованию стандарта репозитория):
+#   1) графики base R / arulesViz сохраняются в PNG в output/
+#      (png()/dev.off() вокруг plot()-вызовов);
+#   2) папка экспорта Groceries_results создана внутри output/
+#      (output/Groceries_results), чтобы не засорять корень;
+#   3) в cat()-вызовах восстановлены переводы строк "\n"
+#      (в docx-исходнике часть "\n" потеряна и заменена пустой строкой);
+#   4) добавлен блок 12 — сохранение кэша результатов (rds) для отчёта.
+# =====================================================================
+
+# 1. Библиотеки
+if (!requireNamespace("arules", quietly = TRUE))
+install.packages("arules")
+if (!requireNamespace("arulesViz", quietly = TRUE))
+install.packages("arulesViz")
+library(arules)
+library(arulesViz)
+library(ggplot2)
+
+# Каталог для графиков и результатов
+out_dir <- "output"
+groceries_dir <- file.path(out_dir, "Groceries_results")
+if (!dir.exists(out_dir))       dir.create(out_dir)
+if (!dir.exists(groceries_dir)) dir.create(groceries_dir)
+
+# 2. Данные и первичный анализ
+data("Groceries")
+summary(Groceries)
+cat("Транзакций:", length(Groceries),
+    "| Уникальных товаров:", length(itemLabels(Groceries)), "\n")
+
+png(file.path(out_dir, "task1_item_frequency.png"),
+    width = 1600, height = 1000, res = 170)
+itemFrequencyPlot(Groceries, topN = 20, type = "relative",
+                  col = "steelblue",
+                  main = "Топ-20 товаров по доле транзакций")
+dev.off()
+
+trans_length <- size(Groceries)
+png(file.path(out_dir, "task1_basket_length_hist.png"),
+    width = 1600, height = 1000, res = 170)
+hist(trans_length, breaks = 30, col = "lightgreen",
+     main = "Распределение длины транзакций",
+     xlab = "Товаров в корзине", ylab = "Транзакций")
+abline(v = mean(trans_length), col = "red", lwd = 2, lty = 2)
+dev.off()
+cat("Средняя длина корзины:", round(mean(trans_length), 2), "\n")
+
+# 3. Построение правил (Apriori)
+rules <- apriori(Groceries,
+                 parameter = list(support = 0.001, confidence = 0.3,
+
+                                        15
+                                  minlen = 2, maxlen = 4, target = "rules"))
+cat("Найдено правил:", length(rules), "\n")
+
+# 4. Удаление избыточных правил
+redundant <- is.redundant(sort(rules, by = "lift", decreasing = TRUE),
+                          measure = "confidence")
+rules_pruned <- sort(rules, by = "lift", decreasing = TRUE)[!redundant]
+cat("Избыточных:", sum(redundant), "| Осталось:", length(rules_pruned), "\n")
+
+# 5. Бизнес-правила (мягкие пороги)
+business_rules <- subset(rules_pruned,
+                         support    > 0.001 &
+                           confidence > 0.3   &
+                           lift        > 1.2)
+business_rules <- sort(business_rules, by = "lift", decreasing = TRUE)
+cat("\nТОП-15 БИЗНЕС-ПРАВИЛ (по lift):\n")
+inspect(head(business_rules, 15))
+
+# 6. Сильные правила (support >= 0.5%, lift > 2)
+strong_rules <- subset(rules_pruned, support > 0.005 & lift > 2)
+strong_rules <- sort(strong_rules, by = "lift", decreasing = TRUE)
+cat("\nСИЛЬНЫЕ ПРАВИЛА (support >= 0.5%, lift > 2):\n")
+cat("Найдено:", length(strong_rules), "\n")
+inspect(head(strong_rules, 10))
+
+# 7. Правила для конкретного товара
+milk_rhs <- sort(subset(rules_pruned, rhs %in% "whole milk"),
+                 by = "confidence", decreasing = TRUE)
+cat("\nЧТО ЧАЩЕ ВСЕГО ПОКУПАЮТ ВМЕСТЕ С МОЛОКОМ (топ-10):\n")
+inspect(head(milk_rhs, 10))
+
+# 8. Визуализация
+set.seed(42)
+png(file.path(out_dir, "task1_rules_scatter.png"),
+    width = 1600, height = 1100, res = 170)
+plot(business_rules, method = "scatter",
+     measure = c("support", "confidence"), shading = "lift",
+     main = "Бизнес-правила: поддержка vs достоверность (цвет = lift)")
+dev.off()
+
+if (length(strong_rules) >= 5) {
+  set.seed(42)
+  png(file.path(out_dir, "task1_rules_graph.png"),
+      width = 1800, height = 1400, res = 170)
+  plot(head(strong_rules, 15), method = "graph", engine = "igraph",
+       main = "Граф топ-15 сильных правил (support >= 0.5%)")
+  dev.off()
+}
+
+# 9. Система рекомендаций (прямой + обратный вывод)
+recommend_for_basket <- function(basket, rules, top_n = 10,
+                                 exclude_in_basket = TRUE) {
+  basket <- intersect(basket, itemLabels(Groceries))
+  if (length(basket) == 0) return(cat("Товары не найдены в каталоге."))
+
+  lhs_mat <- as(lhs(rules), "matrix")
+  rhs_mat <- as(rhs(rules), "matrix")
+
+  cols_lhs <- which(colnames(lhs_mat) %in% basket)
+  cols_rhs <- which(colnames(rhs_mat) %in% basket)
+
+  direct <- rep(FALSE, length(rules))
+  if (length(cols_lhs) > 0) {
+    n_lhs    <- rowSums(lhs_mat)
+
+                                        16
+        n_in_lhs <- rowSums(lhs_mat[, cols_lhs, drop = FALSE])
+        direct   <- n_lhs > 0 & n_lhs == n_in_lhs
+    }
+
+    reverse <- rep(FALSE, length(rules))
+    if (length(cols_rhs) > 0) {
+      n_rhs    <- rowSums(rhs_mat)
+      n_in_rhs <- rowSums(rhs_mat[, cols_rhs, drop = FALSE])
+      reverse <- n_rhs > 0 & n_rhs == n_in_rhs
+    }
+
+    if (sum(direct) == 0 && sum(reverse) == 0) {
+      return(cat("Правил для корзины не найдено."))
+    }
+
+    idx <- which(direct | reverse)
+    idx_sorted <- idx[order(quality(rules[idx])$confidence, decreasing = TRUE)]
+
+    items <- character(0)
+    for (j in seq_along(idx_sorted)) {
+      i <- idx_sorted[j]
+      side <- if (direct[i]) labels(rhs(rules[i])) else labels(lhs(rules[i]))
+      items <- c(items, trimws(strsplit(gsub("[{}]", "", side), ",")[[1]]))
+      if (length(unique(items)) >= top_n * 2) break
+    }
+    items <- unique(items)
+
+    if (exclude_in_basket) items <- setdiff(items, basket)
+    if (length(items) == 0) return(cat("Все рекомендации уже в корзине."))
+
+    cat("Корзина:", paste(basket, collapse = ", "), "\n")
+    cat("Рекомендации:", paste(head(items, top_n), collapse = ", "), "\n")
+    invisible(head(items, top_n))
+}
+
+# 10. Автоматические бизнес-рекомендации
+cat("БИЗНЕС-РЕКОМЕНДАЦИИ НА ОСНОВЕ АССОЦИАТИВНЫХ ПРАВИЛ\n")
+
+# 10.1. Товары-магниты
+freq <- itemFrequency(Groceries, type = "relative")
+top_anchors <- sort(freq, decreasing = TRUE)[1:5]
+
+cat("1. ТОВАРЫ-МАГНИТЫ (высокая частота, тянут трафик):\n")
+for (i in seq_along(top_anchors)) {
+  cat(sprintf("   %d. %-20s — в %4.1f%% корзин\n",
+              i, names(top_anchors)[i], top_anchors[i] * 100))
+}
+cat("   Рекомендация: держать низкую цену, ставить в глубине зала.\n")
+
+# 10.2. Сильные парные связи
+top5 <- head(sort(strong_rules, by = "lift", decreasing = TRUE), 5)
+cat("2. СИЛЬНЫЕ ПАРНЫЕ СВЯЗИ (support >= 0.5%, lift > 2):\n")
+for (i in seq_len(length(top5))) {
+  lhs_i <- gsub(",", ", ", paste(labels(lhs(top5[i])), collapse = ", "))
+  rhs_i <- gsub(",", ", ", paste(labels(rhs(top5[i])), collapse = ", "))
+  q     <- quality(top5[i])
+  cat(sprintf("   %d. %s → %s (lift = %.1f, conf = %.0f%%, supp = %.2f%%)\
+n",
+              i, lhs_i, rhs_i,
+              q$lift, q$confidence * 100, q$support * 100))
+}
+cat("   Рекомендация: кросс-выкладка рядом, bundle-акции.\n")
+
+# 10.3. Готовые наборы по категориям
+
+                                            17
+cat("3. ГОТОВЫЕ НАБОРЫ ПО КАТЕГОРИЯМ (support >= 0.5%, >=2 товара
+категории):\n")
+category_patterns <- list(
+  "Завтрак"      = c("bread", "butter", "milk", "cheese", "egg"),
+  "Выпечка"      = c("flour", "sugar", "baking powder", "curd", "margarine"),
+  "Алкоголь"     = c("beer", "wine", "liquor"),
+  "Снеки"        = c("soda", "snack", "popcorn"),
+  "Быстрый ужин" = c("instant", "hamburger", "sausage", "rolls/buns"),
+  "Фрукты-овощи" = c("fruit", "vegetables", "citrus", "tropical", "root")
+)
+
+rule_matches_category <- function(i, pat) {
+  all_labels <- c(labels(lhs(strong_rules[i])),
+                  labels(rhs(strong_rules[i])))
+  sum(grepl(pat, all_labels)) >= 2
+}
+
+category_rule_counts <- integer(0)   # правка: кэш счётчиков для отчёта
+for (cat_name in names(category_patterns)) {
+  pat <- paste(category_patterns[[cat_name]], collapse = "|")
+  keep <- vapply(seq_len(length(strong_rules)),
+                 function(i) rule_matches_category(i, pat),
+                 logical(1))
+  cat_rules <- strong_rules[keep]
+  category_rule_counts[cat_name] <- length(cat_rules)
+
+  if (length(cat_rules) > 0) {
+    top3 <- head(sort(cat_rules, by = "lift", decreasing = TRUE), 3)
+    cat(sprintf("\n   [%s] — найдено %d правил, топ-3:\n",
+                cat_name, length(cat_rules)))
+    inspect(top3)
+  } else {
+    cat(sprintf("\n   [%s] — правил с support >= 0.5%% и >=2 товарами
+категории не найдено\n",
+                cat_name))
+  }
+}
+
+# 10.4. Обратный вывод для молока
+cat("\n4. ОБРАТНЫЙ ВЫВОД (support >= 0.5%):\n")
+target <- "whole milk"
+rev_rules <- subset(rules_pruned, rhs %in% target & support > 0.005)
+if (length(rev_rules) > 0) {
+  top_rev <- head(sort(rev_rules, by = "confidence", decreasing = TRUE), 3)
+  cat(sprintf("   Чтобы купить %s, чаще всего берут вместе:\n", target))
+  for (i in seq_len(length(top_rev))) {
+    lhs_i <- gsub(",", ", ", paste(labels(lhs(top_rev[i])), collapse = ", "))
+    cat(sprintf("   - %s (conf = %.0f%%, supp = %.2f%%)\n",
+                lhs_i,
+                quality(top_rev[i])$confidence * 100,
+                quality(top_rev[i])$support * 100))
+  }
+  cat("   (это правила вида {X, Y} → {молоко}: если взял X и Y, то с
+высокой")
+  cat("    вероятностью возьмёт и молоко. Обратный вывод, а не «молоко тянет
+X».)\n")
+  cat("   Рекомендация: молоко — товар-магнит, покупают вместе с фруктами,")
+  cat("   овощами и маслом.\n")
+} else {
+  cat("   Правил с support >= 0.5% для молока не найдено.\n")
+}
+
+# 10.5. Примеры рекомендаций для корзин
+cat("5. ПРИМЕРЫ РЕКОМЕНДАЦИЙ ДЛЯ КОРЗИН (strong_rules):\n")
+
+                                        18
+cat("   (функция ищет правила, где товары корзины есть в lhs (прямой вывод")
+cat("    или в rhs (обратный вывод). Если прямых нет — предлагает lhs.)\n")
+
+example_baskets <- list(
+  c("whole milk", "other vegetables"),
+  c("white bread", "butter"),
+  c("bottled beer", "red/blush wine")
+)
+
+example_recs <- list()   # правка: кэш рекомендаций для отчёта
+for (b in example_baskets) {
+  cat(sprintf("\n   Корзина: %s\n", paste(b, collapse = ", ")))
+  res <- recommend_for_basket(b, strong_rules, top_n = 5,
+                              exclude_in_basket = TRUE)
+  example_recs[[paste(b, collapse = ", ")]] <-
+    if (is.null(res)) character(0) else res
+  if (is.null(res) || length(res) == 0) {
+    cat("   (нет рекомендаций)\n")
+  }
+}
+
+# 10.6. Итоговая сводка
+cat("6. ИТОГОВАЯ СВОДКА:\n")
+cat(sprintf("   Всего правил: %d\n", length(rules)))
+cat(sprintf("   После удаления избыточных: %d\n", length(rules_pruned)))
+cat(sprintf("   Бизнес-правил (lift > 1.2): %d\n", length(business_rules)))
+cat(sprintf("   Сильных правил (support >= 0.5%%, lift > 2): %d\n",
+            length(strong_rules)))
+cat("   Ключевые выводы для отчёта:\n")
+cat("   1. Товары-магниты: молоко, овощи, хлеб, газировка, йогурт.\n")
+cat("   2. Рабочие категории: Фрукты-овощи (86 правил), Завтрак (19
+правил),")
+cat("      Быстрый ужин (3 правила).\n")
+cat("   3. Сильные связи: цитрус+овощи+молоко → корнеплоды (lift 4.1); ")
+cat("      масло+сливки → молоко (lift 2.6); булочки+пакеты → сосиски (lift
+3.3).\n")
+cat("   4. Выпечка, Алкоголь, Снеки — нет правил с support >= 0.5% и >=2
+товарами")
+cat("      категории. Нужен более широкий набор правил (support >= 0.1%).\n")
+
+# 11. Экспорт результатов
+output_dir <- groceries_dir     # правка: экспорт в output/Groceries_results
+
+write.csv(as(business_rules, "data.frame"),
+          file.path(output_dir, "business_rules.csv"),
+          row.names = FALSE, fileEncoding = "UTF-8")
+
+write.csv(as(strong_rules, "data.frame"),
+          file.path(output_dir, "strong_rules.csv"),
+          row.names = FALSE, fileEncoding = "UTF-8")
+
+top_lift_df <- as(head(sort(rules_pruned, by = "lift", decreasing = TRUE),
+50),
+                  "data.frame")
+write.csv(top_lift_df,
+          file.path(output_dir, "top50_rules_by_lift.csv"),
+          row.names = FALSE, fileEncoding = "UTF-8")
+
+freq_df <- data.frame(
+  item = names(itemFrequency(Groceries, type = "absolute")),
+  count = as.numeric(itemFrequency(Groceries, type = "absolute"))
+)
+freq_df <- freq_df[order(-freq_df$count), ]
+write.csv(freq_df, file.path(output_dir, "item_frequencies.csv"),
+
+                                         19
+          row.names = FALSE, fileEncoding = "UTF-8")
+
+cat("Результаты сохранены в папке:", output_dir, "\n")
+
+# 12. Кэш результатов для отчёта (добавлено)
+task1_summary <- list(
+  n_transactions = length(Groceries),
+  n_items         = length(itemLabels(Groceries)),
+  mean_basket     = mean(trans_length),
+  n_rules         = length(rules),
+  n_redundant     = sum(redundant),
+  n_rules_pruned = length(rules_pruned),
+  n_business      = length(business_rules),
+  n_strong        = length(strong_rules),
+  top_anchors     = top_anchors,
+  category_counts = category_rule_counts,
+  example_baskets = example_recs
+)
+saveRDS(task1_summary, file.path(out_dir, "task1_summary.rds"))
+cat("Кэш отчёта: output/task1_summary.rds\n")
+
+
+
+
+                                        20
+

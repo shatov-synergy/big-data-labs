@@ -1,0 +1,153 @@
+== 8.1 КАТЕГОРИИ ==
+
+-- товары, матчушие паттерн (169 itemLabels) --
+Завтрак ( 17 ): whole milk; butter; butter milk; UHT-milk; condensed milk; soft cheese; sliced cheese; hard cheese; cream cheese ; processed cheese; spread cheese; curd cheese; specialty cheese; domestic eggs; white bread; brown bread; semi-finished bread 
+Выпечка ( 6 ): curd; curd cheese; flour; margarine; sugar; baking powder 
+Алкоголь ( 7 ): bottled beer; canned beer; liquor; liquor (appetizer); white wine; red/blush wine; sparkling wine 
+Снеки ( 5 ): soda; salty snack; popcorn; nut snack; snack products 
+Быстрый ужин ( 5 ): sausage; organic sausage; hamburger meat; rolls/buns; instant coffee 
+Фрукты-овощи ( 13 ): citrus fruit; tropical fruit; pip fruit; root vegetables; other vegetables; packaged fruit/vegetables; frozen vegetables; frozen fruits; canned vegetables; canned fruit; pickled vegetables; specialty vegetables; fruit/vegetable juice 
+
+-- итоговые счётчики по strong (255) --
+семантика кода (обе стороны):  Zavtrak Vypechka  Alcohol    Sneki    Uzhin     FrOv 
+      19        0        0        0        3       86 
+по-товарная (>=2 товаров):     Zavtrak Vypechka  Alcohol    Sneki    Uzhin     FrOv 
+      24        0        0        0        3      114 
+
+-- воронки категорий (семантика кода) --
+Завтрак: rules= 1161 pruned=  967 supp>0.5%=   36 +lift>2=   19
+Выпечка: rules=   32 pruned=   31 supp>0.5%=    0 +lift>2=    0
+Алкоголь: rules=    7 pruned=    7 supp>0.5%=    0 +lift>2=    0
+Снеки    : rules=   29 pruned=   29 supp>0.5%=    0 +lift>2=    0
+Быстрый ужин: rules=  138 pruned=  112 supp>0.5%=    5 +lift>2=    3
+Фрукты-овощи: rules= 2727 pruned= 2455 supp>0.5%=   97 +lift>2=   86
+
+-- лучшие релевантные правила 'нулевых' категорий (pruned) --
+Выпечка : релевантных в pruned = 31 
+   supp=0.00285 lift=9.96 | whole milk,flour => sugar
+   supp=0.00173 lift=6.05 | yogurt,flour => margarine
+   supp=0.00163 lift=12.77 | flour,margarine => sugar
+   max support=0.00285, max lift=18.61
+Алкоголь : релевантных в pruned = 7 
+   supp=0.00468 lift=5.24 | liquor => bottled beer
+   supp=0.00193 lift=35.72 | bottled beer,red/blush wine => liquor
+   supp=0.00193 lift=21.49 | bottled beer,liquor => red/blush wine
+   max support=0.00468, max lift=35.72
+Снеки : релевантных в pruned = 29 
+   supp=0.00224 lift=8.19 | popcorn => salty snack
+   supp=0.00224 lift=2.47 | pastry,salty snack => soda
+   supp=0.00224 lift=2.14 | fruit/vegetable juice,salty snack => soda
+   max support=0.00224, max lift=16.70
+
+-- пересечения категорий (strong) --
+правил в >=2 категориях: 0 
+
+== 8.2 recommend_for_basket ==
+функция извлечена из строк 104 - 156 
+
+-- ТЕСТ: пустая корзина | корзина: character(0) --
+Товары не найдены в каталоге.функция: NULL
+эталон:  character(0)
+применившихся правил: 0
+
+-- ТЕСТ: неизвестный товар | корзина: c("qwerty", "foobar") --
+Товары не найдены в каталоге.функция: NULL
+эталон:  character(0)
+применившихся правил: 0
+
+-- ТЕСТ: один известный товар | корзина: "whole milk" --
+Корзина: whole milk 
+Рекомендации: frankfurter, sausage, liver loaf, ham, meat 
+функция: [1] "frankfurter" "sausage"     "liver loaf"  "ham"         "meat"       
+эталон:  [1] "tropical fruit"  "pip fruit"       "butter"          "root vegetables"
+[5] "domestic eggs"  
+применившихся правил: 73; топ-5 по conf:
+   conf=0.7000 [обратный] {tropical fruit,root vegetables,yogurt} => {whole milk}
+   conf=0.6750 [обратный] {pip fruit,root vegetables,other vegetables} => {whole milk}
+   conf=0.6600 [обратный] {butter,whipped/sour cream} => {whole milk}
+   conf=0.6484 [обратный] {pip fruit,whipped/sour cream} => {whole milk}
+   conf=0.6389 [обратный] {butter,yogurt} => {whole milk}
+
+-- ТЕСТ: молоко+овощи (из отчёта) | корзина: c("whole milk", "other vegetables") --
+Корзина: whole milk, other vegetables 
+Рекомендации: frankfurter, sausage, liver loaf, ham, meat 
+функция: [1] "frankfurter" "sausage"     "liver loaf"  "ham"         "meat"       
+эталон:  [1] "tropical fruit"  "pip fruit"       "butter"          "root vegetables"
+[5] "citrus fruit"   
+применившихся правил: 163; топ-5 по conf:
+   conf=0.7000 [обратный] {tropical fruit,root vegetables,yogurt} => {whole milk}
+   conf=0.6750 [обратный] {pip fruit,root vegetables,other vegetables} => {whole milk}
+   conf=0.6600 [обратный] {butter,whipped/sour cream} => {whole milk}
+   conf=0.6484 [обратный] {pip fruit,whipped/sour cream} => {whole milk}
+   conf=0.6389 [обратный] {butter,yogurt} => {whole milk}
+
+-- ТЕСТ: белый хлеб+масло (из отчёта) | корзина: c("white bread", "butter") --
+Правил для корзины не найдено.функция: NULL
+эталон:  character(0)
+применившихся правил: 0
+
+-- ТЕСТ: пиво+вино (из отчёта) | корзина: c("bottled beer", "red/blush wine") --
+Правил для корзины не найдено.функция: NULL
+эталон:  character(0)
+применившихся правил: 0
+
+-- ТЕСТ: полное покрытие LHS | корзина: c("butter", "whipped/sour cream") --
+Корзина: butter, whipped/sour cream 
+Рекомендации: frankfurter, sausage, liver loaf, ham, meat 
+функция: [1] "frankfurter" "sausage"     "liver loaf"  "ham"         "meat"       
+эталон:  [1] "whole milk"       "other vegetables"
+применившихся правил: 3; топ-5 по conf:
+   conf=0.6600 [прямой] {butter,whipped/sour cream} => {whole milk}
+   conf=0.5700 [прямой] {butter,whipped/sour cream} => {other vegetables}
+   conf=0.4028 [прямой] {whipped/sour cream} => {other vegetables}
+
+-- ТЕСТ: кандидат уже в корзине | корзина: c("butter", "whole milk", "root vegetables") --
+Корзина: butter, whole milk, root vegetables 
+Рекомендации: frankfurter, sausage, liver loaf, ham, meat 
+функция: [1] "frankfurter" "sausage"     "liver loaf"  "ham"         "meat"       
+эталон:  [1] "tropical fruit"   "pip fruit"        "domestic eggs"    "other vegetables"
+[5] "curd"            
+применившихся правил: 108; топ-5 по conf:
+   conf=0.7000 [обратный] {tropical fruit,root vegetables,yogurt} => {whole milk}
+   conf=0.6750 [обратный] {pip fruit,root vegetables,other vegetables} => {whole milk}
+   conf=0.6600 [обратный] {butter,whipped/sour cream} => {whole milk}
+   conf=0.6484 [обратный] {pip fruit,whipped/sour cream} => {whole milk}
+   conf=0.6389 [обратный] {butter,yogurt} => {whole milk}
+
+-- ТЕСТ: перестановка | корзина: c("other vegetables", "whole milk") --
+Корзина: other vegetables, whole milk 
+Рекомендации: frankfurter, sausage, liver loaf, ham, meat 
+функция: [1] "frankfurter" "sausage"     "liver loaf"  "ham"         "meat"       
+эталон:  [1] "tropical fruit"  "pip fruit"       "butter"          "root vegetables"
+[5] "citrus fruit"   
+применившихся правил: 163; топ-5 по conf:
+   conf=0.7000 [обратный] {tropical fruit,root vegetables,yogurt} => {whole milk}
+   conf=0.6750 [обратный] {pip fruit,root vegetables,other vegetables} => {whole milk}
+   conf=0.6600 [обратный] {butter,whipped/sour cream} => {whole milk}
+   conf=0.6484 [обратный] {pip fruit,whipped/sour cream} => {whole milk}
+   conf=0.6389 [обратный] {butter,yogurt} => {whole milk}
+
+-- ТЕСТ: повтор товара | корзина: c("whole milk", "whole milk", "other vegetables") --
+Корзина: whole milk, other vegetables 
+Рекомендации: frankfurter, sausage, liver loaf, ham, meat 
+функция: [1] "frankfurter" "sausage"     "liver loaf"  "ham"         "meat"       
+эталон:  [1] "tropical fruit"  "pip fruit"       "butter"          "root vegetables"
+[5] "citrus fruit"   
+применившихся правил: 163; топ-5 по conf:
+   conf=0.7000 [обратный] {tropical fruit,root vegetables,yogurt} => {whole milk}
+   conf=0.6750 [обратный] {pip fruit,root vegetables,other vegetables} => {whole milk}
+   conf=0.6600 [обратный] {butter,whipped/sour cream} => {whole milk}
+   conf=0.6484 [обратный] {pip fruit,whipped/sour cream} => {whole milk}
+   conf=0.6389 [обратный] {butter,yogurt} => {whole milk}
+
+== 8.3 МЯСО И МОЛОКО ==
+{meat}=>{whole milk}: n(meat)=254 n(meat&milk)=98 conf(прямое)=0.3858 lift=1.5100
+обратный confidence P(meat|whole milk)=0.0390 (функцией не показывается)
+правило {meat}=>{whole milk} в strong_rules: FALSE 
+
+-- блок 10.4: rhs=whole milk, supp>0.005, топ-3 по conf --
+   conf=0.7000 supp=0.00569 tropical fruit,root vegetables,yogurt => {whole milk}
+   conf=0.6750 supp=0.00549 pip fruit,root vegetables,other vegetables => {whole milk}
+   conf=0.6600 supp=0.00671 butter,whipped/sour cream => {whole milk}
+
+ГОТОВО

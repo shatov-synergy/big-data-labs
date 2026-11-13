@@ -1,0 +1,54 @@
+== ВЕРСИИ ==
+R: R version 4.6.1 (2026-06-24) 
+arules: 1.7.15 
+
+== 7.1 ДАННЫЕ ==
+N (транзакций) = 9835 
+M (товаров) = 169 
+доля непустых имен: 1 
+count(whole milk) = 2513
+count(other vegetables) = 1903
+count(rolls/buns) = 1809
+count(root vegetables) = 1072
+count(citrus fruit) = 814
+count(butter) = 545
+count(whipped/sour cream) = 705
+count(yogurt) = 1372
+
+== 7.3 APRIORI (независимый вызов с параметрами задания) ==
+правил apriori: 12181 
+
+== 7.4 ИЗБЫТОЧНОСТЬ ==
+избыточных: 1362 ; осталось: 10819 
+пример избыточного: { {other vegetables,whole milk,flour} } => { sugar } conf = 0.324324 
+родитель (более общее): { {whole milk,flour} } => { sugar } conf = 0.337349 
+
+== 7.5 ВОРОНКА ФИЛЬТРОВ ==
+бизнес (как в коде, >): 10736 
+сильные (как в коде, support > 0.005): 255 
+бизнес (>= по заданию): 10815 
+сильные (>= по заданию): 255 
+pruned с support==0.001: 0 
+pruned с confidence==0.3: 79 
+pruned с support==0.005: 0 
+pruned с lift==2: 0 
+0.005*N = 49.175  (целого k с k/N==0.005 не существует)
+
+== 7.6 НЕЗАВИСИМЫЙ ПЕРЕСЧЁТ МЕТРИК ЭТАЛОННОГО ПРАВИЛА ==
+N = 9835 ; n(X) = 128 ; n(Y) = 1072 ; n(X и Y) = 57 
+support = 0.00579563 
+confidence = 0.44531250 
+lift = 4.08549295 
+
+== ДОП: метрики топ-1 бизнес-правила (сверка с CSV) ==
+{ {bottled beer,red/blush wine} } => { {liquor} } supp = 0.00193188 conf = 0.39583333 lift = 35.71578746 
+
+== ДОП: категории (статус — детально в проходе 3) ==
+Zavtrak : 24 
+Vypechka : 0 
+Alcohol : 0 
+Sneki : 0 
+Uzhin : 3 
+FrOv : 114 
+
+ГОТОВО

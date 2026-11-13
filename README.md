@@ -70,6 +70,10 @@ docker/               служебные скрипты образа
   сетевые особенности, запреты, конвенции;
 - [`templates/REPORT_STANDARDS.md`](templates/REPORT_STANDARDS.md) —
   стандарты оформления отчётов;
+- [`ROADMAP.md`](ROADMAP.md) — дорожная карта валидации: этапы
+  (проходы 1–6) и чеклист контрольных требований аудита практикума 4
+  (задача 1); дословный протокол —
+  [`labs/lab-04/audit/protocol-zadacha1-apriori.md`](labs/lab-04/audit/protocol-zadacha1-apriori.md);
 - скиллы в `.agents/skills/`: `new-lab` (новая лабораторная),
   `render-reports` (сборка docx+pdf), `synergy-report` (сверка стиля
   отчёта);

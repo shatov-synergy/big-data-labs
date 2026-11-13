@@ -85,6 +85,7 @@ cat("\nЧТО ЧАЩЕ ВСЕГО ПОКУПАЮТ ВМЕСТЕ С МОЛОКО�
 inspect(head(milk_rhs, 10))
 
 # 8. Визуализация
+set.seed(42)
 png(file.path(out_dir, "task1_rules_scatter.png"),
     width = 1600, height = 1100, res = 170)
 plot(business_rules, method = "scatter",
@@ -93,6 +94,7 @@ plot(business_rules, method = "scatter",
 dev.off()
 
 if (length(strong_rules) >= 5) {
+  set.seed(42)
   png(file.path(out_dir, "task1_rules_graph.png"),
       width = 1800, height = 1400, res = 170)
   plot(head(strong_rules, 15), method = "graph", engine = "igraph",
@@ -131,18 +133,13 @@ recommend_for_basket <- function(basket, rules, top_n = 10,
   }
 
   idx <- which(direct | reverse)
-  rec <- rules[idx]
-  rec <- sort(rec, by = "confidence", decreasing = TRUE)
-  idx_sorted <- idx[order(rec@quality$confidence, decreasing = TRUE)]
+  idx_sorted <- idx[order(quality(rules[idx])$confidence, decreasing = TRUE)]
 
   items <- character(0)
   for (j in seq_along(idx_sorted)) {
     i <- idx_sorted[j]
-    if (direct[i]) {
-      items <- c(items, itemLabels(rhs(rules[i])))
-    } else {
-      items <- c(items, itemLabels(lhs(rules[i])))
-    }
+    side <- if (direct[i]) labels(rhs(rules[i])) else labels(lhs(rules[i]))
+    items <- c(items, trimws(strsplit(gsub("[{}]", "", side), ",")[[1]]))
     if (length(unique(items)) >= top_n * 2) break
   }
   items <- unique(items)
