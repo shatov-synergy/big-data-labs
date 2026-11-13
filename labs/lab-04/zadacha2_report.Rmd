@@ -2,6 +2,9 @@
 output:
   word_document:
     reference_docx: reference.docx
+    # URL в СПИСКЕ ИСТОЧНИКОВ должны остаться текстом: autolink создаёт
+    # TargetMode="External" rels, запрещённые OFFICE_SAFETY для сдачи
+    pandoc_args: ["-f", "markdown-autolink_bare_uris"]
 knit: (function(input, ...) { rmarkdown::render(input, output_dir = "output", ...) })
 ---
 
@@ -543,45 +546,75 @@ Prophet): недельная структура её остатков снята
 в рамке AI4Research выполнен корреляционный анализ и построены шесть
 моделей прогноза на 30-дневном окне.
 
-1. **Погода.** Значим собственно-погодный канал — осадки: в дождливые
-   дни продажи ниже на `r fmt_num(s$dry_mean - s$rain_mean, 0)` шт.
-   (`r fmt_num((s$dry_mean - s$rain_mean) / s$dry_mean * 100, 1)`%,
-   p = `r fmt_p(s$rain_ttest_p)`); частная корреляция
-   `r fmt_num(corr$partial[corr$factor == "precip"], 3)`. Температура
-   после календарного контроля эффекта не имеет (частная
-   `r fmt_num(corr$partial[corr$factor == "t_mean"], 3)`): её «сырая»
-   связь — сезонность. Аномалия — положительная частная связь с ветром
-   (`r fmt_num(corr$partial[corr$factor == "wind"], 3)`), оставленная
-   для следующей итерации исследования.
-2. **Цена.** Цена — сильнейший фактор после календаря: частная
-   корреляция `r fmt_num(corr$partial[corr$factor == "Price"], 3)`,
-   log-log эластичность `r fmt_num(s$elasticity, 3)` — спрос
-   неэластичен (|b| < 1): базовые овощи-фрукты покупают стабильно,
-   ценовой рычаг меняет объём покупки, а не факт покупки.
-3. **Макро-контекст.** По НЦСЭД/ОЭСР потребление овощей и фруктов в
-   России за `r paste(range(macro$year), collapse = "–")` гг. растёт
-   (тренды `r fmt_num(s$macro_trend_vgs, 2)` и
-   `r fmt_num(s$macro_trend_frs, 2)` кг/чел/год; r между рядами
-   `r fmt_num(s$cor_macro_fv, 2)`) — категория структурно растущая,
-   точность её локального прогноза окупается.
-4. **Параметры.** Экспериментально подобраны: weekly.seasonality =
-   `r s$best_params$weekly_seasonality`, n.changepoints =
-   `r s$best_params$n_changepoints`, seasonality.prior.scale =
-   `r s$best_params$seasonality_prior_scale`, changepoint.prior.scale =
-   `r s$best_params$changepoint_prior_scale`, holidays.prior.scale =
-   `r s$best_params$holidays_prior_scale`; праздник pre_new_year
-   `r ifelse(s$best_params$use_pre_ny, "оставлен (абляция показала улучшение метрик)", "убран (абляция показала ухудшение метрик)")`,
-   как и предписывает задание для неалкогольных категорий.
-5. **Модели.** Итоговый рейтинг по RMSE:
-   `r paste0(comp$model, " (", fmt_num(comp$RMSE, 1), " шт.)", collapse = "; ")`.
-   Дополнительные регрессоры (погода, цена) не улучшают Prophet на
-   коротком окне — их эффект уже поглощён календарными компонентами;
-   побеждает ансамбль Prophet + ETS (MAPE
-   `r fmt_num(comp$MAPE[1], 2)`%) — это лучшее значение на данном
-   тестовом периоде (параметры Prophet подобраны на том же периоде,
-   поэтому превосходство стоит воспринимать с запасом). Практическая
-   рекомендация:
-   заказы планировать по ансамблю, при выпадении дождливых дней
-   закладывать снижение трафика около 4%, а ценовые решения принимать
-   с учётом неэластичного спроса — умеренная наценка на базовые
-   позиции не разрушает объём.
+– **Погода.** Значим собственно-погодный канал — осадки: в дождливые
+  дни продажи ниже на `r fmt_num(s$dry_mean - s$rain_mean, 0)` шт.
+  (`r fmt_num((s$dry_mean - s$rain_mean) / s$dry_mean * 100, 1)`%,
+  p = `r fmt_p(s$rain_ttest_p)`); частная корреляция
+  `r fmt_num(corr$partial[corr$factor == "precip"], 3)`. Температура
+  после календарного контроля эффекта не имеет (частная
+  `r fmt_num(corr$partial[corr$factor == "t_mean"], 3)`): её «сырая»
+  связь — сезонность. Аномалия — положительная частная связь с ветром
+  (`r fmt_num(corr$partial[corr$factor == "wind"], 3)`), оставленная
+  для следующей итерации исследования.
+
+– **Цена.** Цена — сильнейший фактор после календаря: частная
+  корреляция `r fmt_num(corr$partial[corr$factor == "Price"], 3)`,
+  log-log эластичность `r fmt_num(s$elasticity, 3)` — спрос
+  неэластичен (|b| < 1): базовые овощи-фрукты покупают стабильно,
+  ценовой рычаг меняет объём покупки, а не факт покупки.
+
+– **Макро-контекст.** По НЦСЭД/ОЭСР потребление овощей и фруктов в
+  России за `r paste(range(macro$year), collapse = "–")` гг. растёт
+  (тренды `r fmt_num(s$macro_trend_vgs, 2)` и
+  `r fmt_num(s$macro_trend_frs, 2)` кг/чел/год; r между рядами
+  `r fmt_num(s$cor_macro_fv, 2)`) — категория структурно растущая,
+  точность её локального прогноза окупается.
+
+– **Параметры.** Экспериментально подобраны: weekly.seasonality =
+  `r s$best_params$weekly_seasonality`, n.changepoints =
+  `r s$best_params$n_changepoints`, seasonality.prior.scale =
+  `r s$best_params$seasonality_prior_scale`, changepoint.prior.scale =
+  `r s$best_params$changepoint_prior_scale`, holidays.prior.scale =
+  `r s$best_params$holidays_prior_scale`; праздник pre_new_year
+  `r ifelse(s$best_params$use_pre_ny, "оставлен (абляция показала улучшение метрик)", "убран (абляция показала ухудшение метрик)")`,
+  как и предписывает задание для неалкогольных категорий.
+
+– **Модели.** Итоговый рейтинг по RMSE:
+  `r paste0(comp$model, " (", fmt_num(comp$RMSE, 1), " шт.)", collapse = "; ")`.
+  Дополнительные регрессоры (погода, цена) не улучшают Prophet на
+  коротком окне — их эффект уже поглощён календарными компонентами;
+  побеждает ансамбль Prophet + ETS (MAPE
+  `r fmt_num(comp$MAPE[1], 2)`%) — это лучшее значение на данном
+  тестовом периоде (параметры Prophet подобраны на том же периоде,
+  поэтому превосходство стоит воспринимать с запасом). Практическая
+  рекомендация:
+  заказы планировать по ансамблю, при выпадении дождливых дней
+  закладывать снижение трафика около 4%, а ценовые решения принимать
+  с учётом неэластичного спроса — умеренная наценка на базовые
+  позиции не разрушает объём.
+
+# СПИСОК ИСТОЧНИКОВ
+
+Основная информация работы — файл задания и датасет Magazin.xlsx
+(дневные продажи, цены, температура по категориям); ниже приведены
+использованные интернет-источники: сторонние датасеты (позиции 1–2) и
+методологическая литература с документацией пакетов (позиции 3–5).
+
+1. Open-Meteo Archive API — дневные метеорологические данные (реанализ
+   ERA5), точка ВДНХ, Москва (55,82° с.ш., 37,63° в.д.), переменные
+   temperature_2m_max/min/mean, precipitation_sum, surface_pressure_mean,
+   relative_humidity_2m_mean, wind_speed_10m_max; период 01.01.2023–
+   31.12.2025. URL: https://archive-api.open-meteo.com/
+2. НЦСЭД, платформа «ЭПОХА» — «Продовольственное снабжение и потребление
+   (1961–2024)», dataflow ОЭСР DF_HEALTH_LVNG_FSC (потребление фруктов
+   FRS и овощей VGS, кг/чел/год, Россия). URL:
+   https://repository.nsedc.ru/dataset/sdmxoecd-dsd-health-lvng-df-health-lvng-fsc
+3. Chen Q., Li X., Wang Y. et al. AI4Research: A Survey of Artificial
+   Intelligence for Scientific Research // arXiv:2507.01903, 2025. URL:
+   https://arxiv.org/abs/2507.01903
+4. Prophet — Forecasting at Scale. Документация пакета (декомпозиция
+   тренд/сезонность/праздники, регрессоры). URL:
+   https://facebook.github.io/prophet/
+5. Hyndman R. J., Khandakar Y. Automatic Time Series Forecasting:
+   The forecast package for R (ETS, auto.arima, checkresiduals). URL:
+   https://pkg.robjhyndman.com/forecast/
