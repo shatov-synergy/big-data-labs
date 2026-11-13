@@ -26,3 +26,6 @@ Rplots.pdf
 
 # состояние локального сканера безопасности Mimosa
 .mimosa/
+
+# lock-файлы LibreOffice (.~lock.*#)
+.~lock.*#
